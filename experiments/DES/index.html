@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DES Encryption & Avalanche Effect</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Scoped container to prevent bleeding into parent app -->
+    <div class="des-app-container">
+        
+        <!-- Header -->
+        <header class="des-header">
+            <div class="des-header-left">
+                <button class="des-icon-btn des-back-btn" title="Back">←</button>
+                <div class="des-header-titles">
+                    <h1>DES Encryption & Avalanche Effect</h1>
+                    <h2>Cryptography • TE Comp B</h2>
+                </div>
+            </div>
+            <div class="des-header-right">
+                <button class="des-pill-btn des-btn-white" onclick="DESApp.resetAll()">Reset</button>
+            </div>
+        </header>
+
+        <!-- Main Layout -->
+        <main class="des-main-layout">
+            
+            <!-- Left Panel: Content -->
+            <section class="des-left-panel">
+                
+                <!-- Theory Tab -->
+                <div id="des-tab-theory" class="des-tab-content des-active">
+                    <div class="des-card">
+                        <h3>Aim & Objectives</h3>
+                        <p>To implement the Data Encryption Standard (DES) algorithm for encrypting and decrypting a message, and to demonstrate the <strong>avalanche effect</strong> by observing ciphertext changes from a single-bit input flip.</p>
+                        
+                        <hr class="des-divider">
+                        
+                        <h3>Theory</h3>
+                        <p>DES is a symmetric-key block cipher published by NIST (FIPS PUB 46). Key characteristics include:</p>
+                        <ul>
+                            <li><strong>Block Size:</strong> 64 bits (Plaintext is processed in 64-bit blocks).</li>
+                            <li><strong>Key Size:</strong> 64 bits total, but only <strong>56 bits</strong> are effective (8 bits are used for parity).</li>
+                            <li><strong>Structure:</strong> A 16-round Feistel Network.</li>
+                        </ul>
+                        <p><strong>Core Components:</strong></p>
+                        <ul>
+                            <li><strong>Initial/Final Permutations (IP / FP):</strong> The 64-bit block is permuted before the first round and after the 16th round.</li>
+                            <li><strong>Feistel Round:</strong> The 64-bit block is split into Left (L) and Right (R) 32-bit halves. For each round: <code>L(n) = R(n-1)</code> and <code>R(n) = L(n-1) ⊕ f(R(n-1), K_n)</code>.</li>
+                            <li><strong>The f-function:</strong> Expands R to 48 bits (E-box), XORs with the 48-bit round subkey, passes through 8 substitution boxes (S-boxes) to shrink back to 32 bits, and finally permutes (P-box).</li>
+                            <li><strong>Key Schedule:</strong> The 64-bit key is reduced to 56 bits (PC-1), split into two 28-bit halves, left-shifted according to a specific schedule, and compressed to 48-bit subkeys (PC-2) for each round.</li>
+                        </ul>
+                        <p><strong>The Avalanche Effect:</strong> A desirable property of cryptographic algorithms where a small change in the input (e.g., flipping 1 bit of plaintext or key) results in a drastic change in the output. For a strong cipher like DES, flipping 1 input bit should flip approximately 50% of the ciphertext bits.</p>
+                    </div>
+                </div>
+
+                <!-- Procedure Tab -->
+                <div id="des-tab-procedure" class="des-tab-content">
+                    <div class="des-card">
+                        <h3>Experiment Procedure</h3>
+                        <ol class="des-procedure-list">
+                            <li><strong>Input Plaintext:</strong> Enter the message you want to encrypt. It will be converted into a 64-bit block (padded or truncated if necessary).</li>
+                            <li><strong>Input Key:</strong> Provide a secret key. The system will normalize this into a 64-bit (8-byte) key for DES.</li>
+                            <li><strong>Encrypt:</strong> The system applies the Initial Permutation (IP), 16 Feistel rounds, and the Final Permutation (FP) to generate the Ciphertext.</li>
+                            <li><strong>Verify / Decrypt:</strong> Use the same key to decrypt the Ciphertext and verify that it matches the original Plaintext.</li>
+                            <li><strong>Avalanche Demonstration:</strong> Navigate to the Avalanche tab, select a specific bit to flip in the plaintext or key, and observe the resulting changes in the final ciphertext bits.</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <!-- Simulation Tab -->
+                <div id="des-tab-simulation" class="des-tab-content">
+                    <div class="des-toolbar">
+                        <button class="des-pill-btn des-btn-teal" onclick="DESApp.runSimulation()">Run DES</button>
+                    </div>
+                    <div class="des-card des-sim-container">
+                        <div class="des-input-group">
+                            <label>Plaintext (Text or Hex)</label>
+                            <input type="text" id="des-input-text" placeholder="e.g., secret msg" value="SECURITY">
+                            <small id="des-norm-text" class="des-text-muted">Normalized block: 53 45 43 55 52 49 54 59</small>
+                        </div>
+                        <div class="des-input-group">
+                            <label>64-bit Secret Key</label>
+                            <input type="text" id="des-input-key" placeholder="e.g., mykey123" value="133457799BBCDFF1">
+                            <small id="des-norm-key" class="des-text-muted">Effective key: 13 34 57 79 9B BC DF F1</small>
+                        </div>
+                        
+                        <div class="des-results" id="des-sim-results" style="display:none;">
+                            <hr class="des-divider">
+                            <div class="des-result-box">
+                                <strong>Ciphertext (Hex):</strong> <span id="des-out-hex" class="des-mono des-accent-text"></span><br>
+                                <strong>Ciphertext (Bin):</strong> <span id="des-out-bin" class="des-mono des-text-muted" style="word-break: break-all;"></span>
+                            </div>
+                            <div class="des-result-box des-success-box">
+                                <strong>Round-trip Decryption:</strong> <span id="des-out-decrypted" class="des-mono"></span> <span style="color: green;">✓ Verified</span>
+                            </div>
+
+                            <!-- Round Stepper -->
+                            <div class="des-stepper-container">
+                                <h4>Feistel Rounds (Round <span id="des-round-num">1</span> / 16)</h4>
+                                <div class="des-stepper-controls">
+                                    <button class="des-icon-btn des-btn-white" onclick="DESApp.changeRound(-1)">◀</button>
+                                    <button class="des-icon-btn des-btn-white" onclick="DESApp.changeRound(1)">▶</button>
+                                </div>
+                                <div class="des-round-display">
+                                    <div class="des-round-col">
+                                        <small>Left 32-bits (L)</small>
+                                        <div id="des-round-l" class="des-mono"></div>
+                                    </div>
+                                    <div class="des-round-col des-col-key">
+                                        <small>Round Key (48-bits)</small>
+                                        <div id="des-round-k" class="des-mono"></div>
+                                    </div>
+                                    <div class="des-round-col">
+                                        <small>Right 32-bits (R)</small>
+                                        <div id="des-round-r" class="des-mono"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Avalanche Tab -->
+                <div id="des-tab-avalanche" class="des-tab-content">
+                    <div class="des-toolbar">
+                        <span>Flip a bit in: </span>
+                        <select id="des-ava-target" class="des-select">
+                            <option value="plaintext">Plaintext</option>
+                            <option value="key">Key</option>
+                        </select>
+                        <span> Bit Position (1-64): </span>
+                        <input type="number" id="des-ava-bit" min="1" max="64" value="1" class="des-input-small">
+                        <button class="des-pill-btn des-btn-teal" onclick="DESApp.runAvalanche()">Test Avalanche</button>
+                    </div>
+                    
+                    <div class="des-card" id="des-ava-results" style="display:none;">
+                        <div class="des-ava-row">
+                            <strong>Original Ciphertext:</strong>
+                            <div id="des-ava-orig-hex" class="des-mono des-accent-text"></div>
+                        </div>
+                        <div class="des-ava-row">
+                            <strong>Modified Ciphertext (1 bit flipped):</strong>
+                            <div id="des-ava-mod-hex" class="des-mono des-accent-text"></div>
+                        </div>
+                        
+                        <hr class="des-divider">
+                        <h4>Bit-Level Comparison</h4>
+                        <div class="des-diff-grid" id="des-diff-grid">
+                            <!-- JS will inject 64 columns x 2 rows here -->
+                        </div>
+                        
+                        <div class="des-ava-stats">
+                            <strong id="des-ava-summary"></strong>
+                            <p class="des-text-muted">Consistent with a strong avalanche effect, where changing a single input bit should flip close to 50% of the output bits.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quiz Tab -->
+                <div id="des-tab-quiz" class="des-tab-content">
+                    <div class="des-card">
+                        <h3>Knowledge Assessment</h3>
+                        <div id="des-quiz-container">
+                            <!-- Quiz rendered by JS -->
+                        </div>
+                        <button class="des-pill-btn des-btn-teal" style="margin-top:20px;" onclick="DESApp.submitQuiz()">Submit Answers</button>
+                        <div id="des-quiz-result" style="margin-top: 15px; font-weight: bold;"></div>
+                    </div>
+                </div>
+
+                <div class="des-references des-text-muted" style="padding: 20px;">
+                    <strong>References:</strong> FIPS PUB 46-3 (Data Encryption Standard), Stallings, W. "Cryptography and Network Security".
+                </div>
+            </section>
+
+            <!-- Right Panel: Navigation / Tabs -->
+            <aside class="des-right-panel">
+                <div class="des-tab-list">
+                    <div class="des-tab-item des-tab-active" onclick="DESApp.switchTab('theory', this)">
+                        <span class="des-tab-icon">📖</span> Theory
+                    </div>
+                    <div class="des-tab-item" onclick="DESApp.switchTab('procedure', this)">
+                        <span class="des-tab-icon">📋</span> Procedure
+                    </div>
+                    <div class="des-tab-item" onclick="DESApp.switchTab('simulation', this)">
+                        <span class="des-tab-icon">⚙️</span> Interactive Simulation
+                    </div>
+                    <div class="des-tab-item" onclick="DESApp.switchTab('avalanche', this)">
+                        <span class="des-tab-icon">❄️</span> Avalanche Effect
+                    </div>
+                    <div class="des-tab-item" onclick="DESApp.switchTab('quiz', this)">
+                        <span class="des-tab-icon">📝</span> Quiz
+                    </div>
+                </div>
+            </aside>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,246 @@
+/* Color Theme / Design System */
+:root {
+    --des-header-bg: #A47764;
+    --des-header-bg-dark: #8C6152;
+    --des-page-bg: #FDF1ED;
+    --des-panel-bg: #FFFFFF;
+    --des-accent-orange: #E8734A;
+    --des-accent-teal: #1E88C7;
+    --des-text-dark: #2B2622;
+    --des-text-on-header: #FFFFFF;
+    --des-text-muted: #8A7A72;
+    --des-border-soft: #EDD9D0;
+    --des-pill-active-bg: #A47764;
+    --des-radius-lg: 16px;
+    --des-radius-pill: 999px;
+    --des-shadow-card: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+/* Base resets restricted to container */
+.des-app-container {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--des-page-bg);
+    color: var(--des-text-dark);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
+.des-app-container * {
+    box-sizing: border-box;
+}
+
+/* Typography */
+.des-app-container h1, .des-app-container h2, .des-app-container h3, .des-app-container h4 {
+    margin: 0 0 10px 0;
+}
+.des-app-container p, .des-app-container li {
+    line-height: 1.6;
+    color: var(--des-text-dark);
+}
+.des-text-muted { color: var(--des-text-muted); }
+.des-mono { font-family: monospace; letter-spacing: 1px; }
+.des-accent-text { color: var(--des-accent-orange); font-weight: bold; }
+
+/* Header */
+.des-header {
+    background-color: var(--des-header-bg);
+    color: var(--des-text-on-header);
+    padding: 16px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.des-header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.des-header-titles h1 {
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+.des-header-titles h2 {
+    font-size: 0.85rem;
+    font-weight: 400;
+    opacity: 0.9;
+}
+
+/* Buttons */
+.des-icon-btn {
+    background: var(--des-panel-bg);
+    border: none;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--des-text-dark);
+    font-weight: bold;
+}
+.des-pill-btn {
+    padding: 8px 20px;
+    border-radius: var(--des-radius-pill);
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+.des-btn-white {
+    background-color: var(--des-panel-bg);
+    color: var(--des-text-dark);
+}
+.des-btn-teal {
+    background-color: var(--des-accent-teal);
+    color: var(--des-panel-bg);
+}
+.des-btn-teal:hover { opacity: 0.9; }
+
+/* Layout */
+.des-main-layout {
+    display: flex;
+    padding: 24px;
+    gap: 24px;
+    flex: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+}
+.des-left-panel { flex: 1; }
+.des-right-panel { width: 300px; }
+
+/* Cards & Tabs */
+.des-card {
+    background: var(--des-panel-bg);
+    border-radius: var(--des-radius-lg);
+    padding: 24px;
+    box-shadow: var(--des-shadow-card);
+    margin-bottom: 20px;
+}
+.des-tab-content { display: none; }
+.des-tab-content.des-active { display: block; animation: fadeIn 0.3s ease; }
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Right Panel Navigation */
+.des-tab-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.des-tab-item {
+    background: var(--des-panel-bg);
+    padding: 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid var(--des-border-soft);
+    color: var(--des-text-muted);
+    font-weight: 500;
+    transition: all 0.2s;
+}
+.des-tab-item.des-tab-active {
+    border-color: var(--des-accent-orange);
+    color: var(--des-accent-orange);
+}
+.des-tab-item:hover:not(.des-tab-active) {
+    border-color: #d0c0b8;
+}
+
+/* Forms & Inputs */
+.des-input-group {
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.des-input-group input[type="text"], .des-input-small, .des-select {
+    padding: 10px 14px;
+    border: 1px solid var(--des-border-soft);
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 1rem;
+}
+.des-toolbar {
+    background: var(--des-panel-bg);
+    padding: 12px 24px;
+    border-radius: var(--des-radius-lg);
+    box-shadow: var(--des-shadow-card);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.des-divider {
+    border: none;
+    border-top: 1px solid var(--des-border-soft);
+    margin: 20px 0;
+}
+
+/* Simulation Specifics */
+.des-result-box {
+    background: #f9f5f3;
+    padding: 12px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+}
+.des-success-box {
+    background: #eef7ed;
+    border: 1px solid #c3e6cb;
+}
+.des-stepper-container {
+    margin-top: 24px;
+    border: 1px solid var(--des-border-soft);
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+}
+.des-stepper-controls {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+.des-stepper-controls button {
+    border: 1px solid var(--des-border-soft);
+}
+.des-round-display {
+    display: flex;
+    justify-content: space-between;
+    background: var(--des-page-bg);
+    padding: 16px;
+    border-radius: 6px;
+}
+.des-round-col { flex: 1; text-align: center; }
+.des-col-key { border-left: 1px solid var(--des-border-soft); border-right: 1px solid var(--des-border-soft); }
+.des-round-col div { font-size: 1.1rem; margin-top: 8px; }
+
+/* Avalanche Diff Grid */
+.des-diff-grid {
+    display: grid;
+    grid-template-columns: repeat(64, 1fr);
+    gap: 2px;
+    margin: 20px 0;
+    overflow-x: auto;
+}
+.des-bit-cell {
+    width: 14px;
+    height: 14px;
+    font-size: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #eee;
+    color: transparent; /* visually clean */
+}
+.des-bit-same { background-color: #81c784; } /* Green */
+.des-bit-diff { background-color: #e57373; } /* Red */
+
+.des-quiz-q { margin-bottom: 20px; }
+.des-quiz-q p { font-weight: bold; margin-bottom: 8px; }
+.des-quiz-opt { margin-bottom: 4px; }
