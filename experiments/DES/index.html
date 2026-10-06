@@ -1,0 +1,311 @@
+<link rel="stylesheet" href="style.css">
+
+<div class="des-lab" aria-label="DES Encryption and Avalanche Effect Virtual Lab">
+  <header class="des-header">
+    <div class="des-header-left">
+      <button class="des-icon-btn des-back-btn" id="des-back-btn" type="button" title="Back" aria-label="Back">←</button>
+      <div class="des-brand">
+        <h1>DES Encryption &amp; Avalanche Effect</h1>
+        <p>Cryptography&nbsp; • &nbsp;TE Comp B&nbsp; • &nbsp;Virtual Lab</p>
+      </div>
+    </div>
+    <div class="des-header-actions">
+      <button class="des-header-pill des-share-btn" id="des-share-btn" type="button">↗&nbsp; Share Lab</button>
+      <button class="des-header-pill des-reset-btn" id="des-reset-btn" type="button">Reset</button>
+    </div>
+  </header>
+
+  <div class="des-layout">
+    <main class="des-main-card">
+      <div class="des-toolbar">
+        <div class="des-toolbar-left">
+          <button class="des-menu-btn" id="des-menu-btn" type="button" aria-label="Toggle resource panel">☰</button>
+          <span class="des-live-badge"><span class="des-live-dot"></span> Interactive</span>
+          <span class="des-toolbar-note">Standards-correct DES • No external libraries</span>
+        </div>
+        <div class="des-toolbar-right">
+          <button class="des-toolbar-btn des-secondary" id="des-fill-demo" type="button">Load Demo Vector</button>
+          <button class="des-toolbar-btn des-primary" id="des-run-all" type="button">Run DES</button>
+        </div>
+      </div>
+
+      <div class="des-tabbar" role="tablist" aria-label="Experiment sections">
+        <button class="des-tab is-active" data-tab="theory" role="tab" aria-selected="true">Theory</button>
+        <button class="des-tab" data-tab="procedure" role="tab" aria-selected="false">Procedure</button>
+        <button class="des-tab" data-tab="simulation" role="tab" aria-selected="false">Simulation</button>
+        <button class="des-tab" data-tab="avalanche" role="tab" aria-selected="false">Avalanche</button>
+        <button class="des-tab" data-tab="quiz" role="tab" aria-selected="false">Quiz</button>
+      </div>
+
+      <section class="des-panel is-active" data-panel="theory" role="tabpanel">
+        <div class="des-hero">
+          <div>
+            <p class="des-kicker">CRYPTOGRAPHY VIRTUAL LAB • EXP-DES</p>
+            <h2>Data Encryption Standard (DES)</h2>
+            <p class="des-lead">Encrypt and decrypt messages with a complete 16-round DES implementation, then see how changing one input bit can spread across the entire 64-bit ciphertext.</p>
+          </div>
+          <div class="des-hero-chip">64-bit block<br><strong>16 rounds</strong></div>
+        </div>
+
+        <div class="des-grid-2">
+          <article class="des-info-card des-feature-card">
+            <div class="des-card-icon">◎</div>
+            <div>
+              <h3>Aim &amp; Objectives</h3>
+              <p>To implement DES encryption and decryption for a message and demonstrate the avalanche effect by flipping exactly one input bit and measuring the resulting ciphertext changes.</p>
+              <ul class="des-compact-list">
+                <li>Understand 64-bit blocks and the 56-bit effective key.</li>
+                <li>Trace IP → 16 Feistel rounds → swap → FP.</li>
+                <li>Observe E-box, S-box, P-box and key-schedule behavior.</li>
+                <li>Verify decryption with a live round-trip test.</li>
+              </ul>
+            </div>
+          </article>
+
+          <article class="des-info-card des-feature-card">
+            <div class="des-card-icon">◇</div>
+            <div>
+              <h3>DES at a glance</h3>
+              <div class="des-stat-grid">
+                <div><strong>64</strong><span>input bits</span></div>
+                <div><strong>56</strong><span>effective key bits</span></div>
+                <div><strong>16</strong><span>Feistel rounds</span></div>
+                <div><strong>64</strong><span>output bits</span></div>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <article class="des-info-card">
+          <div class="des-section-heading">
+            <div>
+              <p class="des-kicker">THEORY</p>
+              <h3>How the algorithm follows the supplied DES diagram</h3>
+            </div>
+            <span class="des-mini-tag">FIPS 46-3 structure</span>
+          </div>
+          <div class="des-flow">
+            <div class="des-flow-card"><span>01</span><b>Initial Permutation</b><small>64-bit plaintext → rearranged 64 bits</small></div>
+            <div class="des-flow-arrow">→</div>
+            <div class="des-flow-card"><span>02</span><b>16 Feistel Rounds</b><small>Expansion → XOR K<sub>n</sub> → S-boxes → P-box</small></div>
+            <div class="des-flow-arrow">→</div>
+            <div class="des-flow-card"><span>03</span><b>32-bit Swap</b><small>R<sub>16</sub> || L<sub>16</sub></small></div>
+            <div class="des-flow-arrow">→</div>
+            <div class="des-flow-card"><span>04</span><b>Final Permutation</b><small>64-bit ciphertext</small></div>
+          </div>
+          <div class="des-key-flow">
+            <div><b>Key input</b><span>64 bits with parity positions</span></div>
+            <div class="des-key-arrow">↓ PC-1</div>
+            <div><b>C<sub>0</sub>, D<sub>0</sub></b><span>56 bits</span></div>
+            <div class="des-key-arrow">↓ left shifts</div>
+            <div><b>PC-2</b><span>48-bit K<sub>1</sub> … K<sub>16</sub></span></div>
+          </div>
+        </article>
+
+        <article class="des-info-card">
+          <h3>Core theoretical concepts</h3>
+          <div class="des-theory-grid">
+            <div><b>Block size</b><p>DES operates on 64-bit blocks. Messages longer than one block are split into 8-byte blocks; this lab uses ECB-style independent DES blocks with PKCS#7 padding for teaching simplicity.</p></div>
+            <div><b>Effective key size</b><p>The external key is 64 bits. Eight parity positions are discarded by PC-1, leaving 56 bits that influence the round keys.</p></div>
+            <div><b>Feistel network</b><p>Each round sets L<sub>n</sub> = R<sub>n-1</sub> and R<sub>n</sub> = L<sub>n-1</sub> XOR F(R<sub>n-1</sub>, K<sub>n</sub>). Decryption uses the same round function with subkeys in reverse order.</p></div>
+            <div><b>S-boxes</b><p>Eight fixed 6→4 bit S-boxes introduce non-linearity. Their outputs feed the P-box permutation before the round result is XORed with the left half.</p></div>
+            <div><b>Key schedule</b><p>PC-1 removes parity bits, C and D halves are circularly shifted according to the DES shift schedule, and PC-2 selects 48-bit round subkeys.</p></div>
+            <div><b>Avalanche effect</b><p>A one-bit input change should produce a large, apparently unpredictable output change. For a 64-bit idealized block output, roughly half the bits changing is the expected qualitative behavior.</p></div>
+          </div>
+        </article>
+
+        <article class="des-info-card des-reference-card">
+          <div>
+            <p class="des-kicker">REFERENCES</p>
+            <h3>Primary standards and reading</h3>
+          </div>
+          <ol class="des-reference-list">
+            <li><strong>NIST FIPS PUB 46-3</strong> — Data Encryption Standard (DES), 1999.</li>
+            <li><strong>NIST SP 800-17</strong> — Modes of Operation Validation System (MOVS), including DES known-answer testing guidance.</li>
+            <li><strong>William Stallings</strong>, <em>Cryptography and Network Security: Principles and Practice</em>.</li>
+          </ol>
+          <p class="des-note">DES is retained here as an educational algorithm. NIST withdrew FIPS 46-3 in 2005 because DES no longer provided sufficient security for current protection needs.</p>
+        </article>
+      </section>
+
+      <section class="des-panel" data-panel="procedure" role="tabpanel" hidden>
+        <div class="des-section-heading">
+          <div><p class="des-kicker">PROCEDURE</p><h2>Run a complete DES experiment</h2></div>
+          <span class="des-mini-tag">6-step workflow</span>
+        </div>
+        <div class="des-procedure-list">
+          <div class="des-step"><span>01</span><div><h3>Enter plaintext</h3><p>Type a message or switch to Hex mode for exact byte input. Auto mode detects an even-length hexadecimal string.</p></div></div>
+          <div class="des-step"><span>02</span><div><h3>Enter or generate a key</h3><p>Use any passphrase or a 16-hex-character DES key. The lab derives exactly 8 bytes, shows the result, and reports parity status.</p></div></div>
+          <div class="des-step"><span>03</span><div><h3>Encrypt</h3><p>The normalized blocks pass through IP, 16 Feistel rounds, the final swap, and FP. Ciphertext is displayed as hex and binary.</p></div></div>
+          <div class="des-step"><span>04</span><div><h3>Decrypt and verify</h3><p>The ciphertext is decrypted with reversed subkeys and PKCS#7 padding is removed. The UI displays a live ✓ Verified result when the original bytes are recovered.</p></div></div>
+          <div class="des-step"><span>05</span><div><h3>Step through rounds</h3><p>Open Simulation and inspect one round at a time. Only L, R and K<sub>n</sub> are shown in the round viewer to keep the trace presentation clean.</p></div></div>
+          <div class="des-step"><span>06</span><div><h3>Demonstrate avalanche effect</h3><p>Select plaintext or key, click one of 64 input bit positions, then compare both ciphertexts and the exact Hamming distance.</p></div></div>
+        </div>
+        <div class="des-callout"><b>Experiment tip</b><span>Start with the supplied standard vector before trying free-form messages. This makes it easy to demonstrate algorithm correctness during your viva.</span></div>
+      </section>
+
+      <section class="des-panel" data-panel="simulation" role="tabpanel" hidden>
+        <div class="des-section-heading">
+          <div><p class="des-kicker">INTERACTIVE SIMULATION</p><h2>Encrypt, decrypt, inspect every DES round</h2></div>
+          <span class="des-mini-tag">Live computation</span>
+        </div>
+
+        <div class="des-sim-grid">
+          <section class="des-sim-input-card">
+            <div class="des-field-row">
+              <label class="des-field-label" for="des-plaintext">Plaintext / message</label>
+              <select class="des-select des-small-select" id="des-plaintext-mode" aria-label="Plaintext input mode">
+                <option value="auto">Auto</option><option value="text">Text</option><option value="hex">Hex</option>
+              </select>
+            </div>
+            <textarea id="des-plaintext" class="des-input des-textarea" rows="4" spellcheck="false">0123456789ABCDEF</textarea>
+            <p class="des-help" id="des-plaintext-summary">Auto mode: 16 hex characters → one exact 64-bit block.</p>
+
+            <div class="des-field-row des-mt">
+              <label class="des-field-label" for="des-key">Key (free text / 16-hex DES key)</label>
+              <button id="des-generate-key" class="des-link-btn" type="button">Generate teaching key</button>
+            </div>
+            <input id="des-key" class="des-input" type="text" value="133457799BBCDFF1" spellcheck="false" autocomplete="off">
+            <div class="des-derived-key">
+              <div><span>Effective 64-bit key used</span><code id="des-key-hex">13 34 57 79 9B BC DF F1</code></div>
+              <div><span>Binary</span><code id="des-key-binary">00010011 00110100 01010111 01111001 10011011 10111100 11011111 11110001</code></div>
+              <div id="des-key-parity" class="des-parity ok">✓ Odd-parity positions look valid</div>
+            </div>
+
+            <div class="des-action-row">
+              <button id="des-encrypt" class="des-toolbar-btn des-primary" type="button">Encrypt</button>
+              <button id="des-decrypt" class="des-toolbar-btn des-secondary" type="button">Decrypt</button>
+              <button id="des-copy-output" class="des-toolbar-btn des-secondary" type="button">Copy Ciphertext</button>
+            </div>
+            <div id="des-error" class="des-error" role="alert" hidden></div>
+          </section>
+
+          <section class="des-output-card">
+            <div class="des-output-top">
+              <div><p class="des-kicker">RESULT</p><h3>Ciphertext</h3></div>
+              <span id="des-verified" class="des-status neutral">Not run</span>
+            </div>
+            <div class="des-output-block">
+              <span>HEX</span>
+              <code id="des-cipher-hex">85E813540F0AB405</code>
+            </div>
+            <div class="des-output-block">
+              <span>BINARY</span>
+              <code id="des-cipher-binary">10000101 11101000 00010011 01010100 00001111 00001010 10110100 00000101</code>
+            </div>
+            <div class="des-output-block">
+              <span>DECRYPTED PLAINTEXT</span>
+              <code id="des-decrypted">0123456789ABCDEF</code>
+            </div>
+            <div class="des-output-meta">
+              <span id="des-block-count">Blocks: 1</span>
+              <span id="des-padding-note">Padding: 8 bytes on an exact 8-byte message</span>
+            </div>
+          </section>
+        </div>
+
+        <section class="des-round-card">
+          <div class="des-section-heading des-round-heading">
+            <div><p class="des-kicker">ROUND TRACE</p><h3>One round at a time</h3></div>
+            <div class="des-round-controls">
+              <button class="des-circle-btn" id="des-round-prev" type="button" aria-label="Previous round">‹</button>
+              <span class="des-round-counter" id="des-round-counter">Round 1 / 16</span>
+              <button class="des-circle-btn" id="des-round-next" type="button" aria-label="Next round">›</button>
+              <button class="des-toolbar-btn des-secondary des-play-btn" id="des-round-play" type="button">▶ Play</button>
+            </div>
+          </div>
+          <div class="des-round-flow">
+            <div class="des-round-node"><span>L(n−1)</span><code id="des-round-lprev">00000000</code></div>
+            <div class="des-round-arrow">→</div>
+            <div class="des-round-core"><span id="des-round-title">Round 1 · K₁</span><code id="des-round-key">000000000000</code><small>48-bit subkey</small></div>
+            <div class="des-round-arrow">→</div>
+            <div class="des-round-node"><span>R(n−1)</span><code id="des-round-rprev">00000000</code></div>
+          </div>
+          <div class="des-round-result">
+            <div><span>L(n)</span><code id="des-round-lnext">00000000</code></div>
+            <div><span>R(n)</span><code id="des-round-rnext">00000000</code></div>
+            <div class="des-final-connect"><span>Round 16 → FP</span><strong id="des-round-final">85E813540F0AB405</strong></div>
+          </div>
+        </section>
+
+        <section class="des-test-card">
+          <div><p class="des-kicker">VALIDATION</p><h3>Known-answer checks</h3><p>Run the embedded standard vectors and a live round-trip test.</p></div>
+          <button id="des-run-tests" class="des-toolbar-btn des-primary" type="button">Run validation tests</button>
+          <div id="des-test-results" class="des-test-results"></div>
+        </section>
+      </section>
+
+      <section class="des-panel" data-panel="avalanche" role="tabpanel" hidden>
+        <div class="des-section-heading">
+          <div><p class="des-kicker">AVALANCHE EFFECT</p><h2>Flip one input bit. Compare 64 output bits.</h2></div>
+          <span class="des-mini-tag">Before → After</span>
+        </div>
+        <div class="des-av-controls">
+          <label><span>Flip one bit in</span><select id="des-av-target" class="des-select"><option value="plaintext">Plaintext block</option><option value="key">Key</option></select></label>
+          <label><span>Selected bit</span><select id="des-av-bit-select" class="des-select"></select></label>
+          <button id="des-av-run" class="des-toolbar-btn des-primary" type="button">Run avalanche test</button>
+        </div>
+
+        <div class="des-av-picker-card">
+          <div class="des-section-heading"><div><h3>Choose an exact bit position</h3><p>Click a cell or use the numbered selector. Bit 1 is the most-significant bit.</p></div><span id="des-av-selected" class="des-mini-tag">Bit 1</span></div>
+          <div id="des-av-bit-grid" class="des-bit-picker" aria-label="64 bit selection grid"></div>
+        </div>
+
+        <div class="des-av-results">
+          <div class="des-av-result-card">
+            <div class="des-output-top"><div><p class="des-kicker">ORIGINAL</p><h3>Original ciphertext</h3></div><span class="des-original-chip">Baseline</span></div>
+            <code id="des-av-original-hex" class="des-big-hex">85E813540F0AB405</code>
+            <div class="des-bit-string" id="des-av-original-bits"></div>
+            <p id="des-av-original-input" class="des-help">Original input block: —</p>
+          </div>
+          <div class="des-av-result-card">
+            <div class="des-output-top"><div><p class="des-kicker">MODIFIED</p><h3>New ciphertext</h3></div><span class="des-modified-chip">1 bit flipped</span></div>
+            <code id="des-av-modified-hex" class="des-big-hex">—</code>
+            <div class="des-bit-string" id="des-av-modified-bits"></div>
+            <p id="des-av-modified-input" class="des-help">Modified input block: —</p>
+          </div>
+        </div>
+
+        <section class="des-diff-card">
+          <div class="des-section-heading"><div><p class="des-kicker">BIT-LEVEL DIFF</p><h3>Aligned 64-bit comparison</h3></div><span class="des-mini-tag">Green = unchanged · Red = flipped</span></div>
+          <div class="des-diff-grid-wrap">
+            <div class="des-diff-label">Original</div><div id="des-diff-original" class="des-diff-row"></div>
+            <div class="des-diff-label">New</div><div id="des-diff-modified" class="des-diff-row"></div>
+          </div>
+          <div class="des-hamming">
+            <div><span>Hamming distance</span><strong id="des-hamming-count">0 / 64</strong></div>
+            <div><span>Bits changed</span><strong id="des-hamming-percent">0.0%</strong></div>
+            <div class="des-av-meter"><div id="des-av-meter-fill" style="width:0%"></div></div>
+          </div>
+          <p id="des-av-takeaway" class="des-takeaway">Run the test to compare the original and modified ciphertexts.</p>
+        </section>
+      </section>
+
+      <section class="des-panel" data-panel="quiz" role="tabpanel" hidden>
+        <div class="des-section-heading">
+          <div><p class="des-kicker">ASSESSMENT</p><h2>Check your DES understanding</h2><p>10 questions covering the implementation, structure and avalanche effect.</p></div>
+          <span id="des-quiz-score" class="des-quiz-score">0 / 10</span>
+        </div>
+        <form id="des-quiz-form" class="des-quiz"></form>
+        <div class="des-quiz-actions"><button id="des-quiz-submit" class="des-toolbar-btn des-primary" type="button">Submit quiz</button><button id="des-quiz-reset" class="des-toolbar-btn des-secondary" type="button">Reset quiz</button></div>
+        <div id="des-quiz-result" class="des-quiz-result" hidden></div>
+      </section>
+    </main>
+
+    <aside class="des-resource-panel" id="des-resource-panel" aria-label="Experiment resources">
+      <div class="des-resource-tabs">
+        <span class="des-resource-tab is-active">All</span><span class="des-resource-tab">Interactive</span><span class="des-resource-tab">Assessment</span>
+      </div>
+      <div class="des-resource-rule"></div>
+      <div class="des-resource-heading">Explanation Resources <span>⌃</span></div>
+      <button class="des-resource-card is-active" data-resource="theory"><span class="des-resource-icon">▣</span><span>Theory &amp; Aim</span></button>
+      <button class="des-resource-card" data-resource="procedure"><span class="des-resource-icon">▤</span><span>Procedure</span></button>
+      <button class="des-resource-card" data-resource="simulation"><span class="des-resource-icon">◉</span><span>DES Simulation</span></button>
+      <button class="des-resource-card" data-resource="avalanche"><span class="des-resource-icon">↯</span><span>Avalanche Effect</span></button>
+      <button class="des-resource-card" data-resource="quiz"><span class="des-resource-icon">?</span><span>Quiz &amp; Assessment</span></button>
+      <div class="des-side-note"><strong>Submission-ready</strong><p>Self-contained module. Does not modify common navigation, common CSS or other experiments.</p></div>
+    </aside>
+  </div>
+</div>
+
+<script src="script.js"></script>
