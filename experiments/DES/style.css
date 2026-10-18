@@ -299,6 +299,54 @@
 .des-key-flow span { color: var(--des-text-muted); font-size: 12px; }
 .des-key-arrow { color: var(--des-header-bg-dark); font-weight: 900; }
 
+/* Integrated DES diagrams: theme-matched, responsive, and self-contained. */
+.des-diagrams-section { margin: 18px 0; }
+.des-diagrams-intro { margin: 0 0 14px; }
+.des-diagrams-intro h3 { margin: 0; font-size: 22px; }
+.des-diagrams-intro p:not(.des-kicker) { max-width: 760px; }
+.des-diagrams-grid { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 14px; align-items: stretch; }
+.des-diagram-card { min-width: 0; padding: 18px; border: 1px solid var(--des-border-soft); border-radius: 18px; background: linear-gradient(160deg, #fff 0%, #fffaf7 100%); box-shadow: var(--des-shadow-card); }
+.des-diagram-title { display: flex; align-items: flex-start; gap: 11px; padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--des-border-soft); }
+.des-diagram-index { flex: 0 0 34px; height: 34px; display: grid; place-items: center; border-radius: 11px; background: var(--des-header-bg); color: #fff; font-size: 12px; font-weight: 900; }
+.des-diagram-title h4 { margin: 1px 0 0; color: var(--des-header-bg-dark); font-size: 17px; }
+.des-diagram-title p { margin: 4px 0 0; color: var(--des-text-muted); font-size: 12px; }
+.des-round-diagram, .des-overview-diagram { display: flex; flex-direction: column; align-items: stretch; gap: 7px; }
+.des-diagram-node { min-width: 0; padding: 10px 12px; border: 1px solid var(--des-brown-200); border-radius: 12px; background: #fff; text-align: center; box-shadow: 0 2px 5px rgba(95,61,48,.035); }
+.des-diagram-node > span, .des-overview-node > span, .des-half-node > span, .des-rounds-node > span { display: block; color: var(--des-accent-orange); font-size: 10px; font-weight: 900; letter-spacing: .055em; text-transform: uppercase; }
+.des-diagram-node strong, .des-overview-node strong, .des-half-node strong, .des-rounds-node strong { display: block; margin-top: 3px; color: var(--des-header-bg-dark); font-size: 14px; }
+.des-diagram-node small, .des-overview-node small, .des-half-node small, .des-rounds-node small { display: block; margin-top: 3px; color: var(--des-text-muted); font-size: 11px; line-height: 1.45; }
+.des-node-input, .des-overview-strong { border-color: var(--des-header-bg); background: linear-gradient(135deg, var(--des-header-bg), var(--des-header-bg-dark)); }
+.des-node-input > span, .des-node-input strong, .des-node-input small, .des-overview-strong > span, .des-overview-strong strong, .des-overview-strong small { color: #fff; }
+.des-diagram-down, .des-overview-arrow { color: var(--des-accent-orange); text-align: center; font-size: 20px; font-weight: 900; line-height: 1; }
+.des-xor-row { display: grid; grid-template-columns: minmax(0,1fr) 28px minmax(0,1fr); gap: 7px; align-items: center; }
+.des-xor-row .des-diagram-node { height: 100%; display: flex; flex-direction: column; justify-content: center; }
+.des-xor-symbol { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--des-green-soft); color: var(--des-green); font-size: 21px; font-weight: 900; }
+.des-node-key { background: var(--des-blue-soft); border-color: #cfe6f5; }
+.des-node-left { background: var(--des-brown-100); }
+.des-node-output { background: var(--des-green-soft); border-color: #c6e9d5; }
+.des-diagram-note { padding: 11px 12px; border-radius: 11px; background: var(--des-brown-100); color: var(--des-ink-soft); font-size: 11px; line-height: 1.55; }
+.des-diagram-note strong { color: var(--des-header-bg-dark); }
+.des-overview-diagram { gap: 5px; }
+.des-overview-node { padding: 9px 12px; border: 1px solid var(--des-brown-200); border-radius: 11px; background: #fff; text-align: center; }
+.des-overview-node strong { font-size: 13px; }
+.des-overview-node small { font-size: 10px; }
+.des-overview-output { border-color: var(--des-green); background: linear-gradient(135deg, #328b61, #216e4a); }
+.des-halves-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.des-half-node { padding: 9px; border: 1px solid #cfe6f5; border-radius: 11px; background: var(--des-blue-soft); text-align: center; }
+.des-rounds-node { padding: 12px; border: 1px solid #e8c1b2; border-radius: 13px; background: linear-gradient(135deg, #fff4ee, #fffaf7); text-align: center; }
+.des-round-pills { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; margin-top: 9px; }
+.des-round-pills span { padding: 4px 9px; border: 1px solid var(--des-brown-200); border-radius: 999px; background: #fff; color: var(--des-header-bg-dark); font-size: 10px; font-weight: 850; }
+.des-key-schedule { margin-top: 8px; padding: 12px; border: 1px dashed var(--des-border-soft); border-radius: 12px; background: #fffdfb; }
+.des-key-schedule-heading { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; margin-bottom: 9px; }
+.des-key-schedule-heading span { color: var(--des-header-bg-dark); font-size: 10px; font-weight: 900; letter-spacing: .07em; }
+.des-key-schedule-heading small { color: var(--des-text-muted); font-size: 10px; }
+.des-key-schedule-flow { display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1.25fr); align-items: center; gap: 6px; }
+.des-key-schedule-flow div { min-width: 0; }
+.des-key-schedule-flow strong, .des-key-schedule-flow small { display: block; }
+.des-key-schedule-flow strong { color: var(--des-header-bg-dark); font-size: 10px; }
+.des-key-schedule-flow small { margin-top: 3px; color: var(--des-text-muted); font-size: 9px; line-height: 1.4; }
+.des-key-schedule-flow > b { color: var(--des-accent-orange); }
+
 .des-theory-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
 .des-theory-grid > div { padding: 15px; border-radius: 14px; border: 1px solid var(--des-border-soft); background: #fffcfb; }
 .des-theory-grid b { color: var(--des-header-bg-dark); }
@@ -450,6 +498,7 @@
   .des-resource-panel { position: static; }
   .des-sim-grid { grid-template-columns: 1fr; }
   .des-flow { grid-template-columns: 1fr; }
+  .des-diagrams-grid { grid-template-columns: 1fr; }
   .des-flow-arrow { transform: rotate(90deg); }
 }
 
@@ -466,6 +515,8 @@
   .des-av-results,
   .des-quiz-options { grid-template-columns: 1fr; }
   .des-round-heading { align-items: flex-start; flex-direction: column; }
+  .des-diagram-card { padding: 14px; }
+  .des-diagrams-intro { align-items: flex-start; flex-direction: column; }
   .des-round-controls { width: 100%; justify-content: flex-end; }
   .des-round-flow { grid-template-columns: 1fr; }
   .des-round-arrow { transform: rotate(90deg); }
@@ -479,6 +530,11 @@
 
 @media (max-width: 560px) {
   .des-header { gap: 10px; }
+  .des-xor-row { grid-template-columns: minmax(0,1fr) 24px minmax(0,1fr); gap: 5px; }
+  .des-diagram-node { padding: 9px 7px; }
+  .des-diagram-node strong { font-size: 12px; }
+  .des-key-schedule-flow { grid-template-columns: 1fr; text-align: center; }
+  .des-key-schedule-flow > b { transform: rotate(90deg); }
   .des-icon-btn { width: 44px; height: 44px; font-size: 25px; }
   .des-brand h1 { font-size: 20px; }
   .des-header-actions { display: none; }

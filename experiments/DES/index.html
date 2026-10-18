@@ -102,6 +102,52 @@
           </div>
         </article>
 
+        <section class="des-diagrams-section" aria-label="DES process diagrams">
+          <div class="des-section-heading des-diagrams-intro">
+            <div><p class="des-kicker">VISUAL REFERENCE</p><h3>DES architecture, step by step</h3><p>Two complementary views: the operations inside a Feistel round and the complete 64-bit encryption pipeline.</p></div>
+            <span class="des-mini-tag">DES process maps</span>
+          </div>
+          <div class="des-diagrams-grid">
+            <article class="des-diagram-card">
+              <div class="des-diagram-title"><span class="des-diagram-index">01</span><div><h4>Inside one Feistel round</h4><p>Round function F(R, K<sub>n</sub>)</p></div></div>
+              <div class="des-round-diagram" role="img" aria-label="Right half expands from 32 to 48 bits, is XORed with the 48-bit round key, passes through S-boxes and P-box permutation, then XORs with the left half to form the new right half; the right half becomes the new left half.">
+                <div class="des-diagram-node des-node-input"><span>Input</span><strong>R<sub>n−1</sub></strong><small>32-bit right half</small></div>
+                <div class="des-diagram-down" aria-hidden="true">↓</div>
+                <div class="des-diagram-node"><span>01 · Expansion</span><strong>E-box</strong><small>32 → 48 bits</small></div>
+                <div class="des-diagram-down" aria-hidden="true">↓</div>
+                <div class="des-xor-row"><div class="des-diagram-node des-node-key"><span>Round key</span><strong>K<sub>n</sub></strong><small>48 bits</small></div><div class="des-xor-symbol" aria-label="XOR">⊕</div><div class="des-diagram-node"><span>02 · Combine</span><strong>Bitwise XOR</strong><small>48-bit result</small></div></div>
+                <div class="des-diagram-down" aria-hidden="true">↓</div>
+                <div class="des-diagram-node"><span>03 · Substitution</span><strong>8 S-boxes</strong><small>48 → 32 bits</small></div>
+                <div class="des-diagram-down" aria-hidden="true">↓</div>
+                <div class="des-diagram-node"><span>04 · Permutation</span><strong>P-box</strong><small>Reorders 32 bits</small></div>
+                <div class="des-diagram-down" aria-hidden="true">↓</div>
+                <div class="des-xor-row des-round-combine"><div class="des-diagram-node des-node-left"><span>Left half</span><strong>L<sub>n−1</sub></strong><small>32 bits</small></div><div class="des-xor-symbol" aria-label="XOR">⊕</div><div class="des-diagram-node des-node-output"><span>New right half</span><strong>R<sub>n</sub></strong><small>L<sub>n−1</sub> ⊕ F(R<sub>n−1</sub>, K<sub>n</sub>)</small></div></div>
+                <div class="des-diagram-note"><strong>Feistel swap:</strong> the previous right half becomes L<sub>n</sub>; the XOR result becomes R<sub>n</sub>.</div>
+              </div>
+            </article>
+
+            <article class="des-diagram-card des-overview-card">
+              <div class="des-diagram-title"><span class="des-diagram-index">02</span><div><h4>Complete DES encryption</h4><p>64-bit plaintext to 64-bit ciphertext</p></div></div>
+              <div class="des-overview-diagram" role="img" aria-label="64-bit plaintext passes through the initial permutation, splits into left and right 32-bit halves, undergoes 16 Feistel rounds with round keys from the key schedule, swaps halves, then passes through the final permutation to produce 64-bit ciphertext.">
+                <div class="des-overview-node des-overview-strong"><span>Input</span><strong>64-bit Plaintext</strong></div>
+                <div class="des-overview-arrow" aria-hidden="true">↓</div>
+                <div class="des-overview-node"><span>Step 01</span><strong>Initial Permutation (IP)</strong><small>Rearranges input bits</small></div>
+                <div class="des-overview-arrow" aria-hidden="true">↓</div>
+                <div class="des-halves-row"><div class="des-half-node"><span>Left half</span><strong>L<sub>0</sub></strong><small>32 bits</small></div><div class="des-half-node"><span>Right half</span><strong>R<sub>0</sub></strong><small>32 bits</small></div></div>
+                <div class="des-overview-arrow" aria-hidden="true">↓</div>
+                <div class="des-rounds-node"><span>Core transformation</span><strong>16 Feistel rounds</strong><small>Expansion → XOR → S-box → P-box → XOR and swap</small><div class="des-round-pills"><span>K<sub>1</sub></span><span>K<sub>2</sub></span><span>…</span><span>K<sub>16</sub></span></div></div>
+                <div class="des-overview-arrow" aria-hidden="true">↓</div>
+                <div class="des-overview-node"><span>Step 02</span><strong>Final swap</strong><small>R<sub>16</sub> || L<sub>16</sub></small></div>
+                <div class="des-overview-arrow" aria-hidden="true">↓</div>
+                <div class="des-overview-node"><span>Step 03</span><strong>Final Permutation (FP)</strong><small>Inverse of IP</small></div>
+                <div class="des-overview-arrow" aria-hidden="true">↓</div>
+                <div class="des-overview-node des-overview-strong des-overview-output"><span>Output</span><strong>64-bit Ciphertext</strong></div>
+                <div class="des-key-schedule"><div class="des-key-schedule-heading"><span>KEY SCHEDULE</span><small>Supplies one 48-bit subkey to each round</small></div><div class="des-key-schedule-flow"><div><strong>64-bit key</strong><small>8 parity bits included</small></div><b>→</b><div><strong>PC-1</strong><small>56 effective bits</small></div><b>→</b><div><strong>Left shifts + PC-2</strong><small>K<sub>1</sub> … K<sub>16</sub></small></div></div></div>
+              </div>
+            </article>
+          </div>
+        </section>
+
         <article class="des-info-card">
           <h3>Core theoretical concepts</h3>
           <div class="des-theory-grid">
