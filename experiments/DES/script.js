@@ -660,6 +660,20 @@
       qs('#des-av-selected').textContent = 'Bit ' + state.selectedAvalancheBit;
     }
 
+    function renderInputPreview(originalBits, modifiedBits) {
+      var container = qs('#des-av-input-bits');
+      container.innerHTML = '';
+      originalBits.forEach(function (bit, index) {
+        var cell = document.createElement('span');
+        var changed = bit !== modifiedBits[index];
+        cell.className = 'des-input-bit' + (changed ? ' changed' : '');
+        cell.innerHTML = '<strong>' + modifiedBits[index] + '</strong><small>' + (index + 1) + '</small>';
+        cell.title = 'Input bit ' + (index + 1) + (changed ? ': flipped' : ': unchanged');
+        container.appendChild(cell);
+      });
+      qs('#des-av-input-chip').textContent = (state.avalancheTarget === 'plaintext' ? 'Plaintext' : 'Key') + ' · Bit ' + state.selectedAvalancheBit;
+    }
+
     qs('#des-av-bit-select').addEventListener('change', function () {
       state.selectedAvalancheBit = Number(this.value);
       renderSelectedBit();
@@ -710,10 +724,13 @@
         var modifiedResult = processBlock(modifiedPlain, modifiedKey, false);
         var originalBits = originalResult.bits;
         var modifiedBits = modifiedResult.bits;
+        var originalInputBits = state.avalancheTarget === 'plaintext' ? bytesToBits(originalBlock) : bytesToBits(keyInfo.bytes);
+        var modifiedInputBits = state.avalancheTarget === 'plaintext' ? bytesToBits(modifiedPlain) : bytesToBits(modifiedKey);
         var changed = originalBits.map(function (bit, i) { return bit !== modifiedBits[i]; });
         var distance = changed.filter(Boolean).length;
         var percent = (distance / 64) * 100;
 
+        renderInputPreview(originalInputBits, modifiedInputBits);
         qs('#des-av-original-hex').textContent = originalResult.hex;
         qs('#des-av-modified-hex').textContent = modifiedResult.hex;
         qs('#des-av-original-input').textContent = 'Original plaintext block: ' + bytesToHex(originalBlock) + ' · key: ' + keyInfo.hex;

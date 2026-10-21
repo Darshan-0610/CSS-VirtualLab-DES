@@ -282,10 +282,6 @@
       </section>
 
       <section class="des-panel" data-panel="avalanche" role="tabpanel" hidden>
-        <div class="des-section-heading">
-          <div><p class="des-kicker">AVALANCHE EFFECT</p><h2>Flip one input bit. Compare 64 output bits.</h2></div>
-          <span class="des-mini-tag">Before → After</span>
-        </div>
         <div class="des-av-controls">
           <label><span>Flip one bit in</span><select id="des-av-target" class="des-select"><option value="plaintext">Plaintext block</option><option value="key">Key</option></select></label>
           <label><span>Selected bit</span><select id="des-av-bit-select" class="des-select"></select></label>
@@ -295,6 +291,14 @@
         <div class="des-av-picker-card">
           <div class="des-section-heading"><div><h3>Choose an exact bit position</h3><p>Click a cell or use the numbered selector. Bit 1 is the most-significant bit.</p></div><span id="des-av-selected" class="des-mini-tag">Bit 1</span></div>
           <div id="des-av-bit-grid" class="des-bit-picker" aria-label="64 bit selection grid"></div>
+        </div>
+
+        <div class="des-av-input-preview">
+          <div class="des-section-heading">
+            <div><p class="des-kicker">INPUT BIT PREVIEW</p><h3>Changed input bit</h3><p>Select a bit above to see the complete 64-bit input with only that bit flipped.</p></div>
+            <span id="des-av-input-chip" class="des-mini-tag">Plaintext · Bit 1</span>
+          </div>
+          <div id="des-av-input-bits" class="des-input-bit-grid" aria-label="64 bit input preview"></div>
         </div>
 
         <div class="des-av-results">

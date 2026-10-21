@@ -439,6 +439,16 @@
 .des-bit-cell.is-selected { background: var(--des-header-bg); color: #fff; border-color: var(--des-header-bg-dark); box-shadow: 0 5px 11px rgba(140,97,82,.2); }
 .des-bit-cell.is-selected strong { color: #fff; }
 
+.des-av-input-preview { margin-top: 14px; padding: 17px; border: 1px solid var(--des-border-soft); border-radius: var(--des-radius-lg); background: #fff; box-shadow: var(--des-shadow-card); }
+.des-av-input-preview .des-section-heading { margin-bottom: 12px; }
+.des-av-input-preview .des-section-heading h3 { margin: 0; }
+.des-av-input-preview .des-section-heading p:not(.des-kicker) { margin: 5px 0 0; }
+.des-input-bit-grid { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; }
+.des-input-bit { min-height: 35px; padding: 5px 2px; border: 1px solid var(--des-border-soft); border-radius: 8px; background: #fff; color: var(--des-text-dark); display: grid; place-items: center; gap: 1px; font: 800 12px/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.des-input-bit small { color: var(--des-text-muted); font: 8px/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.des-input-bit.changed { border-color: #c94f43; background: #fdecea; color: #a33c32; box-shadow: inset 0 0 0 1px rgba(201,79,67,.12); }
+.des-input-bit.changed small { color: #c94f43; }
+
 .des-av-results { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .des-av-result-card { padding: 17px; }
 .des-original-chip,
@@ -544,5 +554,7 @@
   .des-bit-cell { min-height: 39px; }
   .des-bit-picker { gap: 4px; }
   .des-bit-cell strong { font-size: 10px; }
+  .des-input-bit-grid { gap: 4px; }
+  .des-input-bit { min-height: 31px; font-size: 10px; }
   .des-diff-bit { height: 21px; }
 }
