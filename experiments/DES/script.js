@@ -1,10 +1,29 @@
+
 /*
  * DES Encryption, Decryption & Avalanche Effect Virtual Lab
- * Self-contained standards-oriented teaching implementation.
- * No external crypto libraries.
+ *
+ * Updated simulation behavior:
+ * 1. Plaintext is entered as ordinary UTF-8 text.
+ * 2. One DES block is processed at a time: exactly 64 bits.
+ * 3. Short plaintext is padded on the right with ASCII spaces.
+ * 4. Plaintext longer than eight UTF-8 bytes is rejected.
+ * 5. Encrypt and Decrypt are separate manual operations.
+ * 6. Ciphertext is always exactly 64 bits / 16 hexadecimal digits.
+ * 7. Binary ciphertext is exactly 64 bits, grouped by byte.
+ * 8. Round trace has only a Next button.
+ * 9. No Demo Vector, top-level Run DES, Copy Ciphertext,
+ *    automatic decryption, or visible validation section.
+ * 10. The original theory, avalanche and quiz sections remain.
+ *
+ * Educational implementation only. DES is not recommended
+ * for protecting modern sensitive information.
  */
 (function (root) {
   'use strict';
+
+  /* =========================================================
+     1. STANDARD DES TABLES
+     ========================================================= */
 
   var IP = [
     58,50,42,34,26,18,10,2,60,52,44,36,28,20,12,4,
@@ -47,7 +66,10 @@
     44,49,39,56,34,53,46,42,50,36,29,32
   ];
 
-  var SHIFTS = [1,1,2,2,2,2,2,2,1,2,2,2,2,2,2,1];
+  var SHIFTS = [
+    1,1,2,2,2,2,2,2,
+    1,2,2,2,2,2,2,1
+  ];
 
   var S_BOXES = [
     [
@@ -115,16 +137,28 @@
     }
   ];
 
+  /* =========================================================
+     2. BIT AND BYTE UTILITIES
+     ========================================================= */
+
   function assert(condition, message) {
-    if (!condition) throw new Error(message || 'Assertion failed');
+    if (!condition) {
+      throw new Error(message || 'Assertion failed.');
+    }
   }
 
   function permute(bits, table) {
-    return table.map(function (position) { return bits[position - 1]; });
+    return table.map(function (position) {
+      return bits[position - 1];
+    });
   }
 
   function xorBits(a, b) {
-    return a.map(function (bit, i) { return bit ^ b[i]; });
+    assert(a.length === b.length, 'XOR operands must have equal length.');
+
+    return a.map(function (bit, index) {
+      return bit ^ b[index];
+    });
   }
 
   function leftRotate(bits, count) {
@@ -133,561 +167,1186 @@
 
   function bytesToBits(bytes) {
     var bits = [];
+
     bytes.forEach(function (byte) {
-      for (var i = 7; i >= 0; i--) bits.push((byte >>> i) & 1);
+      for (var i = 7; i >= 0; i--) {
+        bits.push((byte >>> i) & 1);
+      }
     });
+
     return bits;
   }
 
   function bitsToBytes(bits) {
-    assert(bits.length % 8 === 0, 'Bit length must be a multiple of 8.');
+    assert(
+      bits.length % 8 === 0,
+      'Bit length must be a multiple of 8.'
+    );
+
     var bytes = [];
+
     for (var i = 0; i < bits.length; i += 8) {
       var value = 0;
-      for (var j = 0; j < 8; j++) value = (value << 1) | bits[i + j];
+
+      for (var j = 0; j < 8; j++) {
+        value = (value << 1) | bits[i + j];
+      }
+
       bytes.push(value & 255);
     }
+
     return bytes;
   }
 
   function hexToBytes(hex) {
-    var clean = hex.trim().replace(/\s+/g, '');
-    assert(/^[0-9a-fA-F]*$/.test(clean) && clean.length % 2 === 0, 'Hex input must contain an even number of hexadecimal characters.');
+    var clean = String(hex).trim().replace(/\s+/g, '');
+
+    assert(
+      /^[0-9a-fA-F]*$/.test(clean) && clean.length % 2 === 0,
+      'Hex input must contain an even number of hexadecimal characters.'
+    );
+
     var bytes = [];
-    for (var i = 0; i < clean.length; i += 2) bytes.push(parseInt(clean.slice(i, i + 2), 16));
+
+    for (var i = 0; i < clean.length; i += 2) {
+      bytes.push(parseInt(clean.slice(i, i + 2), 16));
+    }
+
     return bytes;
   }
 
   function bytesToHex(bytes) {
-    return bytes.map(function (b) { return b.toString(16).padStart(2, '0'); }).join('').toUpperCase();
+    return bytes.map(function (byte) {
+      return byte.toString(16).padStart(2, '0');
+    }).join('').toUpperCase();
   }
 
   function bytesToSpacedHex(bytes) {
-    return bytes.map(function (b) { return b.toString(16).padStart(2, '0'); }).join(' ').toUpperCase();
+    return bytes.map(function (byte) {
+      return byte.toString(16).padStart(2, '0');
+    }).join(' ').toUpperCase();
   }
 
   function bitsToHex(bits) {
     return bytesToHex(bitsToBytes(bits));
   }
 
+  /*
+   * Grouped display:
+   * 8 bytes = exactly 64 binary digits.
+   * Spaces are separators, not additional bits.
+   */
   function bitsToBinary(bits, spaced) {
-    var s = bits.join('');
-    if (!spaced) return s;
-    return s.match(/.{1,8}/g).join(' ');
+    var binary = bits.join('');
+
+    if (!spaced) {
+      return binary;
+    }
+
+    return binary.match(/.{1,8}/g).join(' ');
   }
 
   function utf8Encode(text) {
-    if (typeof TextEncoder !== 'undefined') return Array.from(new TextEncoder().encode(text));
+    if (typeof TextEncoder !== 'undefined') {
+      return Array.from(new TextEncoder().encode(text));
+    }
+
     var encoded = unescape(encodeURIComponent(text));
-    var out = [];
-    for (var i = 0; i < encoded.length; i++) out.push(encoded.charCodeAt(i));
-    return out;
+    var result = [];
+
+    for (var i = 0; i < encoded.length; i++) {
+      result.push(encoded.charCodeAt(i));
+    }
+
+    return result;
   }
 
   function utf8Decode(bytes) {
-    if (typeof TextDecoder !== 'undefined') return new TextDecoder('utf-8', { fatal: false }).decode(new Uint8Array(bytes));
+    if (typeof TextDecoder !== 'undefined') {
+      return new TextDecoder('utf-8', {
+        fatal: false
+      }).decode(new Uint8Array(bytes));
+    }
+
     var binary = String.fromCharCode.apply(null, bytes);
-    try { return decodeURIComponent(escape(binary)); } catch (e) { return binary; }
+
+    try {
+      return decodeURIComponent(escape(binary));
+    } catch (error) {
+      return binary;
+    }
   }
 
   function normalizeEightBytes(bytes) {
-    if (bytes.length === 0) return [0,0,0,0,0,0,0,0];
-    if (bytes.length >= 8) return bytes.slice(0, 8);
-    var out = [];
-    for (var i = 0; out.length < 8; i++) out.push(bytes[i % bytes.length]);
-    return out;
+    if (bytes.length === 0) {
+      return [0,0,0,0,0,0,0,0];
+    }
+
+    if (bytes.length >= 8) {
+      return bytes.slice(0, 8);
+    }
+
+    var result = [];
+
+    for (var i = 0; result.length < 8; i++) {
+      result.push(bytes[i % bytes.length]);
+    }
+
+    return result;
   }
 
+  function hasOddParity(bytes) {
+    return bytes.every(function (byte) {
+      var ones = 0;
+
+      for (var i = 0; i < 8; i++) {
+        ones += (byte >>> i) & 1;
+      }
+
+      return ones % 2 === 1;
+    });
+  }
+
+  /*
+   * A 16-character hexadecimal key is interpreted as 8 exact
+   * bytes. Other key inputs are encoded as UTF-8, then normalized
+   * to 8 bytes for compatibility with the original lab.
+   */
   function parseKeyInput(input) {
-    var trimmed = String(input == null ? '' : input).trim();
-    var exactHex = /^[0-9a-fA-F]{16}$/.test(trimmed);
-    var bytes = exactHex ? hexToBytes(trimmed) : normalizeEightBytes(utf8Encode(trimmed));
+    var text = String(input == null ? '' : input).trim();
+    var exactHex = /^[0-9a-fA-F]{16}$/.test(text);
+
+    assert(text.length > 0, 'Enter a DES key.');
+
+    var bytes = exactHex
+      ? hexToBytes(text)
+      : normalizeEightBytes(utf8Encode(text));
+
     return {
       bytes: bytes,
       hex: bytesToHex(bytes),
       binary: bitsToBinary(bytesToBits(bytes), true),
       exactHex: exactHex,
       parityOk: hasOddParity(bytes),
-      source: exactHex ? '16-hex-character DES key' : 'UTF-8 text normalized to 8 bytes'
+      source: exactHex
+        ? '16-character hexadecimal key'
+        : 'UTF-8 text normalized to eight bytes'
     };
   }
 
-  function parsePlaintext(input, mode) {
+  /*
+   * One-block plaintext handling.
+   *
+   * Text is never auto-detected as hexadecimal.
+   * Each entered character is interpreted as text.
+   *
+   * The DES algorithm receives one exact 8-byte block.
+   * Inputs shorter than 8 bytes are padded with ASCII spaces.
+   * Inputs longer than 8 UTF-8 bytes are rejected.
+   */
+  function preparePlaintext(input) {
     var text = String(input == null ? '' : input);
-    var trimmed = text.trim();
-    var isHex = mode === 'hex' || (mode === 'auto' && /^[0-9a-fA-F]+$/.test(trimmed) && trimmed.length % 2 === 0 && trimmed.length > 0);
-    if (mode === 'hex' && (!/^[0-9a-fA-F]*$/.test(trimmed) || trimmed.length % 2 !== 0)) {
-      throw new Error('Hex plaintext must contain an even number of hexadecimal characters.');
+    var bytes = utf8Encode(text);
+
+    assert(
+      bytes.length > 0,
+      'Enter plaintext before running the simulation.'
+    );
+
+    assert(
+      bytes.length <= 8,
+      'This simulation accepts one 64-bit DES block. Enter plaintext containing at most 8 UTF-8 bytes.'
+    );
+
+    var originalBytes = bytes.slice();
+    var block = bytes.slice();
+
+    while (block.length < 8) {
+      block.push(0x20);
     }
-    var bytes = isHex ? hexToBytes(trimmed) : utf8Encode(text);
+
     return {
-      bytes: bytes,
-      mode: isHex ? 'hex' : 'text',
-      hex: bytesToHex(bytes),
-      binary: bitsToBinary(bytesToBits(bytes), true)
+      text: text,
+      bytes: originalBytes,
+      block: block,
+      originalLength: originalBytes.length,
+      paddingLength: 8 - originalBytes.length,
+      hex: bytesToHex(block),
+      binary: bitsToBinary(bytesToBits(block), true)
     };
   }
 
-  function hasOddParity(bytes) {
-    return bytes.every(function (byte) {
-      var ones = 0;
-      for (var i = 0; i < 8; i++) ones += (byte >>> i) & 1;
-      return ones % 2 === 1;
-    });
+  function flipBit(bytes, oneBasedPosition) {
+    assert(
+      bytes.length === 8,
+      'Bit flipping requires an exact 64-bit block.'
+    );
+
+    assert(
+      oneBasedPosition >= 1 && oneBasedPosition <= 64,
+      'Bit position must be between 1 and 64.'
+    );
+
+    var result = bytes.slice();
+    var zeroBased = oneBasedPosition - 1;
+    var byteIndex = Math.floor(zeroBased / 8);
+    var bitIndex = 7 - (zeroBased % 8);
+
+    result[byteIndex] ^= (1 << bitIndex);
+
+    return result;
   }
 
-  function pkcs7Pad(bytes, blockSize) {
-    var pad = blockSize - (bytes.length % blockSize);
-    if (pad === 0) pad = blockSize;
-    return bytes.concat(Array.from({ length: pad }, function () { return pad; }));
-  }
-
-  function pkcs7Unpad(bytes, blockSize) {
-    assert(bytes.length > 0 && bytes.length % blockSize === 0, 'Invalid padded plaintext length.');
-    var pad = bytes[bytes.length - 1];
-    assert(pad >= 1 && pad <= blockSize, 'Invalid PKCS#7 padding.');
-    for (var i = bytes.length - pad; i < bytes.length; i++) assert(bytes[i] === pad, 'Invalid PKCS#7 padding bytes.');
-    return bytes.slice(0, bytes.length - pad);
-  }
-
-  function sBoxTransform(bits48) {
-    var out = [];
-    for (var i = 0; i < 8; i++) {
-      var chunk = bits48.slice(i * 6, i * 6 + 6);
-      var row = (chunk[0] << 1) | chunk[5];
-      var col = (chunk[1] << 3) | (chunk[2] << 2) | (chunk[3] << 1) | chunk[4];
-      var value = S_BOXES[i][row][col];
-      for (var j = 3; j >= 0; j--) out.push((value >>> j) & 1);
+  function compareBytes(a, b) {
+    if (!a || !b || a.length !== b.length) {
+      return false;
     }
-    return out;
+
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
-  function roundFunction(r32, subkey48) {
-    var expanded = permute(r32, E);
-    var mixed = xorBits(expanded, subkey48);
-    var sboxed = sBoxTransform(mixed);
-    return permute(sboxed, P);
+  function hammingDistance(a, b) {
+    assert(a.length === b.length, 'Bit strings must have equal length.');
+
+    var distance = 0;
+
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) {
+        distance++;
+      }
+    }
+
+    return distance;
   }
+
+  /* =========================================================
+     3. DES KEY SCHEDULE
+     ========================================================= */
 
   function generateSubkeys(keyBytes) {
     var keyBits = bytesToBits(keyBytes);
-    assert(keyBits.length === 64, 'DES key must normalize to exactly 64 bits.');
-    var permuted = permute(keyBits, PC1);
-    var c = permuted.slice(0, 28);
-    var d = permuted.slice(28, 56);
-    return SHIFTS.map(function (shift) {
-      c = leftRotate(c, shift);
-      d = leftRotate(d, shift);
-      return permute(c.concat(d), PC2);
-    });
-  }
 
-  function processBlock(blockBytes, keyBytes, decrypt) {
-    assert(blockBytes.length === 8, 'DES block must be exactly 8 bytes.');
-    var blockBits = permute(bytesToBits(blockBytes), IP);
-    var left = blockBits.slice(0, 32);
-    var right = blockBits.slice(32, 64);
-    var keys = generateSubkeys(keyBytes);
-    if (decrypt) keys = keys.slice().reverse();
-    var rounds = [];
+    assert(
+      keyBits.length === 64,
+      'DES requires a 64-bit key representation.'
+    );
+
+    // PC-1: remove parity positions and permute the remaining bits.
+    var permutedKey = permute(keyBits, PC1);
+
+    var c = permutedKey.slice(0, 28);
+    var d = permutedKey.slice(28, 56);
+
+    var subkeys = [];
 
     for (var i = 0; i < 16; i++) {
-      var prevL = left.slice();
-      var prevR = right.slice();
-      var f = roundFunction(right, keys[i]);
-      left = right;
-      right = xorBits(prevL, f);
+      c = leftRotate(c, SHIFTS[i]);
+      d = leftRotate(d, SHIFTS[i]);
+
+      // PC-2: select 48 bits for this round.
+      var subkey = permute(c.concat(d), PC2);
+
+      subkeys.push(subkey);
+    }
+
+    return subkeys;
+  }
+
+  /* =========================================================
+     4. DES ROUND FUNCTION
+     ========================================================= */
+
+  function sBoxTransform(bits48) {
+    assert(bits48.length === 48, 'S-box input must be 48 bits.');
+
+    var output = [];
+
+    for (var boxIndex = 0; boxIndex < 8; boxIndex++) {
+      var chunk = bits48.slice(
+        boxIndex * 6,
+        boxIndex * 6 + 6
+      );
+
+      // First and last bits determine the S-box row.
+      var row = (chunk[0] << 1) | chunk[5];
+
+      // The middle four bits determine the S-box column.
+      var column =
+        (chunk[1] << 3) |
+        (chunk[2] << 2) |
+        (chunk[3] << 1) |
+        chunk[4];
+
+      var value = S_BOXES[boxIndex][row][column];
+
+      for (var bitIndex = 3; bitIndex >= 0; bitIndex--) {
+        output.push((value >>> bitIndex) & 1);
+      }
+    }
+
+    assert(output.length === 32, 'S-box output must be 32 bits.');
+
+    return output;
+  }
+
+  function roundFunction(right32, subkey48) {
+    assert(right32.length === 32, 'Right half must be 32 bits.');
+    assert(subkey48.length === 48, 'Subkey must be 48 bits.');
+
+    // E-box: expand 32-bit R to 48 bits.
+    var expanded = permute(right32, E);
+
+    // Combine expanded R with the current subkey.
+    var mixed = xorBits(expanded, subkey48);
+
+    // Eight standard DES substitution boxes: 48 -> 32 bits.
+    var substituted = sBoxTransform(mixed);
+
+    // P-box: permute the 32-bit S-box result.
+    return permute(substituted, P);
+  }
+
+  /* =========================================================
+     5. CORE SINGLE-BLOCK DES ENCRYPTION / DECRYPTION
+     ========================================================= */
+
+  function processBlock(blockBytes, keyBytes, decrypt) {
+    assert(
+      blockBytes.length === 8,
+      'The DES data block must contain exactly 8 bytes.'
+    );
+
+    assert(
+      keyBytes.length === 8,
+      'The DES key must contain exactly 8 bytes.'
+    );
+
+    // Step 1: apply Initial Permutation.
+    var initialBits = permute(bytesToBits(blockBytes), IP);
+
+    // Step 2: split into the two 32-bit halves.
+    var left = initialBits.slice(0, 32);
+    var right = initialBits.slice(32, 64);
+
+    // Step 3: generate the sixteen forward-order subkeys.
+    var originalSubkeys = generateSubkeys(keyBytes);
+
+    // Decryption uses the same Feistel network with reversed keys.
+    var keysUsed = decrypt
+      ? originalSubkeys.slice().reverse()
+      : originalSubkeys.slice();
+
+    var rounds = [];
+
+    for (var roundIndex = 0; roundIndex < 16; roundIndex++) {
+      var previousLeft = left.slice();
+      var previousRight = right.slice();
+      var currentKey = keysUsed[roundIndex];
+
+      /*
+       * DES Feistel equations:
+       *
+       * L_n = R_(n-1)
+       * R_n = L_(n-1) XOR F(R_(n-1), K_n)
+       */
+      var fResult = roundFunction(previousRight, currentKey);
+
+      left = previousRight.slice();
+      right = xorBits(previousLeft, fResult);
+
       rounds.push({
-        number: i + 1,
-        lPrev: prevL,
-        rPrev: prevR,
-        key: keys[i],
+        number: roundIndex + 1,
+        keyNumber: decrypt ? 16 - roundIndex : roundIndex + 1,
+        lPrev: previousLeft,
+        rPrev: previousRight,
+        key: currentKey.slice(),
         lNext: left.slice(),
         rNext: right.slice()
       });
     }
 
+    /*
+     * After round 16 the DES pre-output is R16 || L16.
+     * The Final Permutation then produces the output block.
+     */
     var preOutput = right.concat(left);
     var finalBits = permute(preOutput, FP);
+    var finalBytes = bitsToBytes(finalBits);
+
     return {
-      bytes: bitsToBytes(finalBits),
+      bytes: finalBytes,
       bits: finalBits,
-      hex: bitsToHex(finalBits),
+      hex: bytesToHex(finalBytes),
       binary: bitsToBinary(finalBits, true),
       rounds: rounds,
-      subkeys: generateSubkeys(keyBytes)
+      subkeys: originalSubkeys,
+      decrypt: Boolean(decrypt)
     };
   }
 
-  function cryptBytes(bytes, keyBytes, decrypt) {
-    assert(bytes.length % 8 === 0, 'Data length must be a multiple of 8 bytes.');
-    var output = [];
-    var firstTrace = null;
-    for (var i = 0; i < bytes.length; i += 8) {
-      var result = processBlock(bytes.slice(i, i + 8), keyBytes, decrypt);
-      output = output.concat(result.bytes);
-      if (!firstTrace) firstTrace = result;
-    }
-    return { bytes: output, trace: firstTrace };
-  }
-
-  function encryptMessage(plaintextBytes, keyBytes) {
-    var padded = pkcs7Pad(plaintextBytes, 8);
-    var result = cryptBytes(padded, keyBytes, false);
-    return { padded: padded, bytes: result.bytes, trace: result.trace };
-  }
-
-  function decryptMessage(cipherBytes, keyBytes) {
-    var result = cryptBytes(cipherBytes, keyBytes, true);
-    var unpadded = pkcs7Unpad(result.bytes, 8);
-    return { bytes: unpadded, trace: result.trace };
-  }
-
-  function flipBit(bytes, oneBasedPosition) {
-    assert(oneBasedPosition >= 1 && oneBasedPosition <= 64, 'Bit position must be between 1 and 64.');
-    var out = bytes.slice();
-    var zeroBased = oneBasedPosition - 1;
-    var byteIndex = Math.floor(zeroBased / 8);
-    var bitIndex = 7 - (zeroBased % 8);
-    out[byteIndex] ^= (1 << bitIndex);
-    return out;
-  }
-
-  function hammingDistance(a, b) {
-    var distance = 0;
-    for (var i = 0; i < a.length; i++) if (a[i] !== b[i]) distance++;
-    return distance;
-  }
-
-  function compareBytes(a, b) {
-    if (a.length !== b.length) return false;
-    for (var i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
-    return true;
-  }
+  /* =========================================================
+     6. KNOWN-ANSWER SELF-TESTS
+     ========================================================= */
 
   function runNistTests() {
     return NIST_VECTORS.map(function (vector) {
       var key = hexToBytes(vector.key);
-      var plain = hexToBytes(vector.plaintext);
-      var encrypted = processBlock(plain, key, false).hex;
-      var decrypted = bytesToHex(processBlock(hexToBytes(encrypted), key, true).bytes);
+      var plaintext = hexToBytes(vector.plaintext);
+
+      var encrypted = processBlock(
+        plaintext,
+        key,
+        false
+      );
+
+      var decrypted = processBlock(
+        encrypted.bytes,
+        key,
+        true
+      );
+
       return {
         name: vector.name,
         expected: vector.ciphertext,
-        actual: encrypted,
-        decrypt: decrypted,
-        passed: encrypted === vector.ciphertext && decrypted === vector.plaintext
+        actual: encrypted.hex,
+        decrypted: decrypted.hex,
+        passed:
+          encrypted.hex === vector.ciphertext &&
+          decrypted.hex === vector.plaintext
       };
     });
   }
 
   function selfTest() {
     var tests = runNistTests();
-    tests.forEach(function (t) { assert(t.passed, t.name + ' failed.'); });
-    var key = parseKeyInput('mysecret').bytes;
-    var plain = utf8Encode('DES lab');
-    var enc = encryptMessage(plain, key);
-    var dec = decryptMessage(enc.bytes, key);
-    assert(compareBytes(dec.bytes, plain), 'Round-trip self-test failed.');
+
+    tests.forEach(function (test) {
+      assert(
+        test.passed,
+        test.name + ' failed. Expected ' +
+        test.expected + ', got ' + test.actual + '.'
+      );
+    });
+
     return true;
   }
 
-  var API = {
-    encryptMessage: encryptMessage,
-    decryptMessage: decryptMessage,
+  /* Public API retained for optional use by other project code. */
+  root.DESLab = {
     processBlock: processBlock,
     parseKeyInput: parseKeyInput,
-    parsePlaintext: parsePlaintext,
-    normalizeEightBytes: normalizeEightBytes,
-    flipBit: flipBit,
-    hammingDistance: hammingDistance,
+    preparePlaintext: preparePlaintext,
+    generateSubkeys: generateSubkeys,
     bytesToHex: bytesToHex,
-    bytesToBinary: function (bytes, spaced) { return bitsToBinary(bytesToBits(bytes), spaced); },
+    bytesToSpacedHex: bytesToSpacedHex,
     hexToBytes: hexToBytes,
+    bytesToBinary: function (bytes, spaced) {
+      return bitsToBinary(bytesToBits(bytes), spaced);
+    },
     utf8Encode: utf8Encode,
     utf8Decode: utf8Decode,
+    flipBit: flipBit,
+    hammingDistance: hammingDistance,
     runNistTests: runNistTests,
     selfTest: selfTest,
     NIST_VECTORS: NIST_VECTORS
   };
 
-  root.DESLab = API;
+  if (typeof document === 'undefined') {
+    return;
+  }
 
-  if (typeof document === 'undefined') return;
+  /* =========================================================
+     7. DOM HELPERS AND APPLICATION STATE
+     ========================================================= */
 
   document.addEventListener('DOMContentLoaded', function () {
-    var qs = function (selector) { return document.querySelector(selector); };
-    var qsa = function (selector) { return Array.from(document.querySelectorAll(selector)); };
+    var qs = function (selector) {
+      return document.querySelector(selector);
+    };
+
+    var qsa = function (selector) {
+      return Array.from(document.querySelectorAll(selector));
+    };
+
+    function on(selector, eventName, callback) {
+      var element = qs(selector);
+
+      if (element) {
+        element.addEventListener(eventName, callback);
+      }
+
+      return element;
+    }
+
+    function setText(selector, value) {
+      var element = qs(selector);
+
+      if (element) {
+        element.textContent = value;
+      }
+    }
+
+    function setValue(selector, value) {
+      var element = qs(selector);
+
+      if (element) {
+        element.value = value;
+      }
+    }
+
+    function setClass(selector, className) {
+      var element = qs(selector);
+
+      if (element) {
+        element.className = className;
+      }
+    }
+
+    function setHidden(selector, hidden) {
+      var element = qs(selector);
+
+      if (element) {
+        element.hidden = hidden;
+      }
+    }
 
     var state = {
       currentRound: 1,
       trace: null,
-      lastCipherBytes: [],
-      lastPlainBytes: [],
-      lastKeyBytes: [],
-      lastPlainInputMode: 'auto',
-      roundPlaying: false,
+      traceMode: 'encrypt',
+
+      lastCipherBytes: null,
+      lastCipherHex: '',
+      lastPlainBytes: null,
+      lastPlainBlock: null,
+      lastPlainLength: 0,
+      lastKeyBytes: null,
+      lastKeyHex: '',
+
       selectedAvalancheBit: 1,
       avalancheTarget: 'plaintext'
     };
 
     function showError(message) {
-      var el = qs('#des-error');
-      el.textContent = message;
-      el.hidden = false;
+      var element = qs('#des-error');
+
+      if (element) {
+        element.textContent = message;
+        element.hidden = false;
+      } else {
+        console.error('[DES Lab]', message);
+      }
     }
 
-    function clearError() { qs('#des-error').hidden = true; }
+    function clearError() {
+      setHidden('#des-error', true);
+    }
+
+    function currentKeyInfo() {
+      return parseKeyInput(
+        getInputValue('#des-key')
+      );
+    }
+
+    function getInputValue(selector) {
+      var element = qs(selector);
+      return element ? element.value : '';
+    }
+
+    function currentPlaintext() {
+      return preparePlaintext(
+        getInputValue('#des-plaintext')
+      );
+    }
+
+    /* =======================================================
+       8. LEFT SIDEBAR ROUTING
+       ======================================================= */
+
+    var VALID_TABS = [
+      'theory',
+      'procedure',
+      'simulation',
+      'avalanche',
+      'quiz'
+    ];
 
     function setTab(tabName) {
-      qsa('.des-tab').forEach(function (tab) {
-        var active = tab.getAttribute('data-tab') === tabName;
-        tab.classList.toggle('is-active', active);
-        tab.setAttribute('aria-selected', active ? 'true' : 'false');
-      });
-      qsa('.des-panel').forEach(function (panel) {
-        var active = panel.getAttribute('data-panel') === tabName;
-        panel.classList.toggle('is-active', active);
+      if (VALID_TABS.indexOf(tabName) === -1) {
+        tabName = 'theory';
+      }
+
+      qsa('.des-panel[data-panel]').forEach(function (panel) {
+        var active = panel.dataset.panel === tabName;
+
         panel.hidden = !active;
+        panel.classList.toggle('is-active', active);
       });
-      qsa('.des-resource-card').forEach(function (card) {
-        card.classList.toggle('is-active', card.getAttribute('data-resource') === tabName);
+
+      qsa('.des-resource-card[data-resource]').forEach(function (button) {
+        var active = button.dataset.resource === tabName;
+
+        button.classList.toggle('is-active', active);
+
+        if (active) {
+          button.setAttribute('aria-current', 'page');
+        } else {
+          button.removeAttribute('aria-current');
+        }
       });
-      try { history.replaceState(null, '', '#' + tabName); } catch (e) {}
-      if (tabName === 'avalanche') updateAvalanche();
+
+      try {
+        history.replaceState(
+          null,
+          '',
+          '#' + tabName
+        );
+      } catch (error) {
+        // Panel navigation still works if history cannot be updated.
+      }
+
+      if (tabName === 'avalanche') {
+        updateAvalanche();
+      }
     }
 
-    qsa('.des-tab').forEach(function (tab) { tab.addEventListener('click', function () { setTab(tab.dataset.tab); }); });
-    qsa('.des-resource-card').forEach(function (card) { card.addEventListener('click', function () { setTab(card.dataset.resource); }); });
-
-    var menu = qs('#des-menu-btn');
-    menu.addEventListener('click', function () {
-      var panel = qs('#des-resource-panel');
-      var layout = panel.parentElement;
-      var hidden = panel.classList.toggle('des-resource-collapsed');
-      layout.classList.toggle('des-resource-hidden', hidden);
-      if (!hidden) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    qsa('.des-resource-card[data-resource]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        setTab(button.dataset.resource);
+      });
     });
 
-    qs('#des-back-btn').addEventListener('click', function () {
-      if (window.history.length > 1) window.history.back();
-      else window.location.hash = '';
+    // Support an older version of the page if horizontal tabs remain.
+    qsa('.des-tab[data-tab]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        setTab(button.dataset.tab);
+      });
     });
 
-    qs('#des-share-btn').addEventListener('click', async function () {
-      var shareData = { title: 'DES Encryption & Avalanche Effect', text: 'Interactive DES virtual lab', url: window.location.href };
+    on('#des-back-btn', 'click', function () {
+      if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        setTab('theory');
+      }
+    });
+
+    on('#des-share-btn', 'click', async function () {
+      var shareData = {
+        title: 'DES Cryptography Virtual Lab',
+        text: 'Interactive DES Encryption and Avalanche Effect Lab',
+        url: window.location.href
+      };
+
       try {
-        if (navigator.share) await navigator.share(shareData);
-        else if (navigator.clipboard) { await navigator.clipboard.writeText(window.location.href); alert('Lab link copied to clipboard.'); }
-      } catch (e) {}
+        if (navigator.share) {
+          await navigator.share(shareData);
+        } else if (navigator.clipboard) {
+          await navigator.clipboard.writeText(window.location.href);
+          alert('Lab link copied.');
+        } else {
+          alert('Share is unavailable in this browser.');
+        }
+      } catch (error) {
+        // The user may cancel sharing.
+      }
     });
 
-    qs('#des-reset-btn').addEventListener('click', function () { resetLab(); });
+    /* =======================================================
+       9. KEY PREVIEW AND PLAINTEXT SUMMARY
+       ======================================================= */
 
     function updateKeyPreview() {
       try {
-        var keyInfo = parseKeyInput(qs('#des-key').value);
-        qs('#des-key-hex').textContent = bytesToSpacedHex(keyInfo.bytes);
-        qs('#des-key-binary').textContent = keyInfo.binary;
+        var keyInfo = currentKeyInfo();
+
+        setText('#des-key-hex', bytesToSpacedHex(keyInfo.bytes));
+        setText('#des-key-binary', keyInfo.binary);
+
         var parity = qs('#des-key-parity');
-        if (keyInfo.parityOk) {
-          parity.textContent = '✓ Every key byte has odd parity';
-          parity.className = 'des-parity ok';
-        } else {
-          parity.textContent = '⚠ Parity bits are not all odd; DES PC-1 discards them for the effective 56-bit key';
-          parity.className = 'des-parity warn';
+
+        if (parity) {
+          if (keyInfo.parityOk) {
+            parity.textContent = '✓ Every key byte has odd parity';
+            parity.className = 'des-parity ok';
+          } else {
+            parity.textContent =
+              'Parity positions are ignored by PC-1. This key does not have odd parity in every byte.';
+            parity.className = 'des-parity warn';
+          }
         }
-        state.lastKeyBytes = keyInfo.bytes;
-      } catch (e) { showError(e.message); }
+
+        clearError();
+      } catch (error) {
+        showError(error.message);
+      }
     }
 
     function updatePlainSummary() {
       try {
-        var mode = qs('#des-plaintext-mode').value;
-        var parsed = parsePlaintext(qs('#des-plaintext').value, mode);
-        var paddedLen = Math.ceil(Math.max(parsed.bytes.length, 1) / 8) * 8;
-        if (parsed.bytes.length % 8 === 0) paddedLen += 8;
-        var description = parsed.mode === 'hex' ? 'Hex mode: exact byte interpretation.' : 'Text mode: UTF-8 byte encoding.';
-        qs('#des-plaintext-summary').textContent = description + ' ' + parsed.bytes.length + ' input byte(s) → ' + paddedLen / 8 + ' DES block(s) after PKCS#7 padding.';
+        var plain = currentPlaintext();
+
+        setText(
+          '#des-plaintext-summary',
+          plain.originalLength + ' UTF-8 byte(s) · ' +
+          plain.paddingLength + ' right-padding space(s) · ' +
+          'one 64-bit DES block.'
+        );
+
         clearError();
-      } catch (e) { qs('#des-plaintext-summary').textContent = 'Input requires attention.'; showError(e.message); }
+      } catch (error) {
+        setText('#des-plaintext-summary', error.message);
+      }
     }
 
-    qs('#des-key').addEventListener('input', updateKeyPreview);
-    qs('#des-plaintext').addEventListener('input', updatePlainSummary);
-    qs('#des-plaintext-mode').addEventListener('change', updatePlainSummary);
+    on('#des-key', 'input', updateKeyPreview);
+    on('#des-key', 'change', updateKeyPreview);
+    on('#des-plaintext', 'input', updatePlainSummary);
 
-    qs('#des-generate-key').addEventListener('click', function () {
-      var choices = ['MYDESKEY', 'TECOMP2026', 'LABKEY01', 'CRYPTLAB', 'FIPS46DE'];
-      var value = choices[Math.floor(Math.random() * choices.length)];
-      qs('#des-key').value = value;
+    on('#des-generate-key', 'click', function () {
+      var choices = [
+        'MYDESKEY',
+        'LABKEY01',
+        'CRYPTLAB',
+        'FIPS46DE',
+        'DESLAB01'
+      ];
+
+      var selected = choices[
+        Math.floor(Math.random() * choices.length)
+      ];
+
+      setValue('#des-key', selected);
+
       updateKeyPreview();
     });
 
-    qs('#des-fill-demo').addEventListener('click', function () {
-      qs('#des-plaintext-mode').value = 'hex';
-      qs('#des-plaintext').value = '0123456789ABCDEF';
-      qs('#des-key').value = '133457799BBCDFF1';
-      updatePlainSummary();
-      updateKeyPreview();
-      setTab('simulation');
-      runEncryption();
-    });
-
-    qs('#des-run-all').addEventListener('click', function () { setTab('simulation'); runEncryption(); });
-    qs('#des-encrypt').addEventListener('click', runEncryption);
-    qs('#des-decrypt').addEventListener('click', runEncryption);
-
-    async function copyText(value) {
-      try {
-        if (navigator.clipboard) { await navigator.clipboard.writeText(value); return true; }
-        var area = document.createElement('textarea'); area.value = value; document.body.appendChild(area); area.select(); document.execCommand('copy'); area.remove(); return true;
-      } catch (e) { return false; }
-    }
-
-    qs('#des-copy-output').addEventListener('click', async function () {
-      var ok = await copyText(qs('#des-cipher-hex').textContent);
-      qs('#des-copy-output').textContent = ok ? 'Copied ✓' : 'Copy failed';
-      setTimeout(function () { qs('#des-copy-output').textContent = 'Copy Ciphertext'; }, 1100);
-    });
-
-    function decryptDisplay(cipherBytes, keyBytes, originalBytes) {
-      var result = decryptMessage(cipherBytes, keyBytes);
-      var verified = compareBytes(result.bytes, originalBytes);
-      var status = qs('#des-verified');
-      status.textContent = verified ? '✓ Verified' : 'Verification failed';
-      status.className = 'des-status ' + (verified ? 'verified' : 'failed');
-      var plaintextMode = qs('#des-plaintext-mode').value;
-      qs('#des-decrypted').textContent = plaintextMode === 'hex' || (plaintextMode === 'auto' && /^[0-9a-fA-F]+$/.test(qs('#des-plaintext').value.trim())) ? bytesToHex(result.bytes) : utf8Decode(result.bytes);
-      return result;
-    }
+    /* =======================================================
+       10. ENCRYPTION — EXPLICIT USER ACTION ONLY
+       ======================================================= */
 
     function runEncryption() {
       try {
         clearError();
-        var keyInfo = parseKeyInput(qs('#des-key').value);
-        var parsed = parsePlaintext(qs('#des-plaintext').value, qs('#des-plaintext-mode').value);
-        if (parsed.bytes.length === 0) throw new Error('Plaintext cannot be empty.');
-        var encrypted = encryptMessage(parsed.bytes, keyInfo.bytes);
-        var decrypted = decryptDisplay(encrypted.bytes, keyInfo.bytes, parsed.bytes);
-        state.trace = encrypted.trace;
-        state.lastCipherBytes = encrypted.bytes;
-        state.lastPlainBytes = parsed.bytes;
-        state.lastKeyBytes = keyInfo.bytes;
+
+        var plain = currentPlaintext();
+        var keyInfo = currentKeyInfo();
+
+        var result = processBlock(
+          plain.block,
+          keyInfo.bytes,
+          false
+        );
+
+        // Save exactly the values associated with this ciphertext.
+        state.lastCipherBytes = result.bytes.slice();
+        state.lastCipherHex = result.hex;
+        state.lastPlainBytes = plain.bytes.slice();
+        state.lastPlainBlock = plain.block.slice();
+        state.lastPlainLength = plain.originalLength;
+        state.lastKeyBytes = keyInfo.bytes.slice();
+        state.lastKeyHex = keyInfo.hex;
+
+        state.trace = result;
+        state.traceMode = 'encrypt';
         state.currentRound = 1;
-        qs('#des-cipher-hex').textContent = bytesToHex(encrypted.bytes);
-        qs('#des-cipher-binary').textContent = bitsToBinary(bytesToBits(encrypted.bytes), true);
-        qs('#des-block-count').textContent = 'Blocks: ' + (encrypted.bytes.length / 8);
-        qs('#des-padding-note').textContent = 'PKCS#7 padding: ' + (encrypted.padded.length - parsed.bytes.length) + ' byte(s)';
+
+        setText('#des-cipher-hex', result.hex);
+        setText('#des-cipher-binary', result.binary);
+        setText('#des-block-count', 'Blocks: 1 · 64 bits');
+        setText(
+          '#des-padding-note',
+          'Right-padding: ' + plain.paddingLength + ' space(s)'
+        );
+
+        setText(
+          '#des-decrypted',
+          'Click Decrypt to decrypt the ciphertext.'
+        );
+
+        setText('#des-verified', 'Encryption complete');
+
+        setClass(
+          '#des-verified',
+          'des-status verified'
+        );
+
         updateRoundView();
-        updateKeyPreview();
-        updatePlainSummary();
         updateAvalanche();
-        // Keep the decrypted variable referenced to make the flow explicit for demonstrations.
-        void decrypted;
-      } catch (e) {
-        showError(e.message || 'Unable to run DES.');
-        qs('#des-verified').textContent = 'Needs input';
-        qs('#des-verified').className = 'des-status failed';
+
+        return result;
+      } catch (error) {
+        showError(error.message || 'Encryption failed.');
+
+        setText('#des-verified', 'Encryption failed');
+
+        setClass(
+          '#des-verified',
+          'des-status failed'
+        );
+
+        return null;
       }
     }
 
-    function roundBitsHex(bits) { return bitsToHex(bits); }
+    on('#des-encrypt', 'click', function () {
+      runEncryption();
+    });
+
+    /* =======================================================
+       11. DECRYPTION — MANUAL, NEVER AUTOMATIC
+       ======================================================= */
+
+    function runDecryption() {
+      try {
+        clearError();
+
+        if (
+          !state.lastCipherBytes ||
+          state.lastCipherBytes.length !== 8
+        ) {
+          throw new Error(
+            'No ciphertext is available. Click Encrypt first to create a 64-bit ciphertext block.'
+          );
+        }
+
+        var keyInfo = currentKeyInfo();
+
+        // Decrypt only when the user explicitly clicks Decrypt.
+        var result = processBlock(
+          state.lastCipherBytes,
+          keyInfo.bytes,
+          true
+        );
+
+        var sameKey =
+          keyInfo.hex === state.lastKeyHex;
+
+        var recoveredText;
+
+        if (sameKey) {
+          // Use the saved original input length to preserve trailing spaces.
+          recoveredText = utf8Decode(
+            result.bytes.slice(0, state.lastPlainLength)
+          );
+        } else {
+          // When a different key is entered, show the complete decoded
+          // output rather than pretending the original text was recovered.
+          recoveredText = utf8Decode(result.bytes);
+        }
+
+        var verified =
+          sameKey &&
+          state.lastPlainBlock &&
+          compareBytes(result.bytes, state.lastPlainBlock);
+
+        state.trace = result;
+        state.traceMode = 'decrypt';
+        state.currentRound = 1;
+
+        setText('#des-decrypted', recoveredText);
+
+        if (verified) {
+          setText('#des-verified', '✓ Round trip verified');
+
+          setClass(
+            '#des-verified',
+            'des-status verified'
+          );
+        } else if (sameKey) {
+          setText('#des-verified', 'Decryption complete');
+
+          setClass(
+            '#des-verified',
+            'des-status neutral'
+          );
+        } else {
+          setText(
+            '#des-verified',
+            'Decrypted with current key'
+          );
+
+          setClass(
+            '#des-verified',
+            'des-status neutral'
+          );
+        }
+
+        updateRoundView();
+
+        return result;
+      } catch (error) {
+        showError(error.message || 'Decryption failed.');
+
+        setText('#des-verified', 'Decryption unavailable');
+
+        setClass(
+          '#des-verified',
+          'des-status failed'
+        );
+
+        return null;
+      }
+    }
+
+    on('#des-decrypt', 'click', function () {
+      runDecryption();
+    });
+
+    /* =======================================================
+       12. ROUND TRACE — NEXT BUTTON ONLY
+       ======================================================= */
+
+    function subscriptNumber(number) {
+      var map = [
+        '₀','₁','₂','₃','₄',
+        '₅','₆','₇','₈','₉'
+      ];
+
+      return String(number).split('').map(function (digit) {
+        return map[Number(digit)];
+      }).join('');
+    }
 
     function updateRoundView() {
-      if (!state.trace) return;
-      var r = state.trace.rounds[state.currentRound - 1];
-      qs('#des-round-counter').textContent = 'Round ' + state.currentRound + ' / 16';
-      qs('#des-round-title').textContent = 'Round ' + state.currentRound + ' · K' + subscriptNumber(state.currentRound);
-      qs('#des-round-lprev').textContent = roundBitsHex(r.lPrev);
-      qs('#des-round-rprev').textContent = roundBitsHex(r.rPrev);
-      qs('#des-round-key').textContent = roundBitsHex(r.key);
-      qs('#des-round-lnext').textContent = roundBitsHex(r.lNext);
-      qs('#des-round-rnext').textContent = roundBitsHex(r.rNext);
-      qs('#des-round-final').textContent = state.trace.hex;
-      qs('#des-round-prev').disabled = state.currentRound <= 1;
-      qs('#des-round-next').disabled = state.currentRound >= 16;
+      var nextButton = qs('#des-round-next');
+
+      if (!state.trace) {
+        setText('#des-round-counter', 'Round 0 / 16');
+        setText('#des-round-title', 'Encrypt or decrypt first');
+        setText('#des-round-lprev', '—');
+        setText('#des-round-rprev', '—');
+        setText('#des-round-key', '—');
+        setText('#des-round-lnext', '—');
+        setText('#des-round-rnext', '—');
+        setText('#des-round-final', '—');
+
+        if (nextButton) {
+          nextButton.disabled = true;
+        }
+
+        return;
+      }
+
+      var round = state.trace.rounds[state.currentRound - 1];
+
+      setText(
+        '#des-round-counter',
+        'Round ' + state.currentRound + ' / 16'
+      );
+
+      var roundLabel;
+
+      if (state.traceMode === 'decrypt') {
+        roundLabel =
+          'Decrypt round ' +
+          state.currentRound +
+          ' · K' +
+          subscriptNumber(round.keyNumber);
+      } else {
+        roundLabel =
+          'Round ' +
+          state.currentRound +
+          ' · K' +
+          subscriptNumber(round.keyNumber);
+      }
+
+      setText('#des-round-title', roundLabel);
+      setText('#des-round-lprev', bitsToHex(round.lPrev));
+      setText('#des-round-rprev', bitsToHex(round.rPrev));
+      setText('#des-round-key', bitsToHex(round.key));
+      setText('#des-round-lnext', bitsToHex(round.lNext));
+      setText('#des-round-rnext', bitsToHex(round.rNext));
+      setText('#des-round-final', state.trace.hex);
+
+      if (nextButton) {
+        nextButton.disabled = state.currentRound >= 16;
+
+        nextButton.textContent =
+          state.currentRound >= 16
+            ? 'Completed ✓'
+            : 'Next →';
+      }
     }
 
-    function subscriptNumber(n) {
-      var map = ['₀','₁','₂','₃','₄','₅','₆','₇','₈','₉'];
-      return String(n).split('').map(function (d) { return map[Number(d)]; }).join('');
-    }
+    on('#des-round-next', 'click', function () {
+      if (!state.trace) {
+        return;
+      }
 
-    qs('#des-round-prev').addEventListener('click', function () { if (state.trace && state.currentRound > 1) { state.currentRound--; updateRoundView(); } });
-    qs('#des-round-next').addEventListener('click', function () { if (state.trace && state.currentRound < 16) { state.currentRound++; updateRoundView(); } });
-    qs('#des-round-play').addEventListener('click', function () {
-      if (state.roundPlaying) { state.roundPlaying = false; qs('#des-round-play').textContent = '▶ Play'; return; }
-      if (!state.trace) runEncryption();
-      state.roundPlaying = true;
-      qs('#des-round-play').textContent = 'Ⅱ Pause';
-      var tick = function () {
-        if (!state.roundPlaying) return;
-        if (state.currentRound >= 16) { state.roundPlaying = false; qs('#des-round-play').textContent = '▶ Play'; return; }
+      if (state.currentRound < 16) {
         state.currentRound++;
         updateRoundView();
-        setTimeout(tick, 1000);
-      };
-      tick();
+      }
     });
+
+    /* =======================================================
+       13. AVALANCHE BIT SELECTOR
+       ======================================================= */
 
     function buildAvalancheGrid() {
       var picker = qs('#des-av-bit-grid');
-      var select = qs('#des-av-bit-select');
+      var selector = qs('#des-av-bit-select');
+
+      if (!picker || !selector) {
+        return;
+      }
+
       picker.innerHTML = '';
-      select.innerHTML = '';
+      selector.innerHTML = '';
+
       for (var i = 1; i <= 64; i++) {
         var cell = document.createElement('button');
+
         cell.type = 'button';
-        cell.className = 'des-bit-cell' + (i === state.selectedAvalancheBit ? ' is-selected' : '');
+
+        cell.className =
+          'des-bit-cell' +
+          (
+            i === state.selectedAvalancheBit
+              ? ' is-selected'
+              : ''
+          );
+
         cell.dataset.bit = String(i);
-        cell.innerHTML = '<strong>' + i + '</strong><span>' + (Math.floor((i - 1) / 8) + 1) + '.' + (((i - 1) % 8) + 1) + '</span>';
+
+        var bytePosition = Math.floor((i - 1) / 8) + 1;
+        var positionInByte = ((i - 1) % 8) + 1;
+
+        var strong = document.createElement('strong');
+        strong.textContent = i;
+
+        var small = document.createElement('span');
+        small.textContent =
+          bytePosition + '.' + positionInByte;
+
+        cell.appendChild(strong);
+        cell.appendChild(small);
+
         cell.addEventListener('click', function () {
-          state.selectedAvalancheBit = Number(this.dataset.bit);
-          qs('#des-av-bit-select').value = String(state.selectedAvalancheBit);
+          state.selectedAvalancheBit =
+            Number(this.dataset.bit);
+
+          setValue(
+            '#des-av-bit-select',
+            String(state.selectedAvalancheBit)
+          );
+
           renderSelectedBit();
           updateAvalanche();
         });
+
         picker.appendChild(cell);
-        var option = document.createElement('option'); option.value = String(i); option.textContent = 'Bit ' + i; select.appendChild(option);
+
+        var option = document.createElement('option');
+
+        option.value = String(i);
+        option.textContent = 'Bit ' + i;
+
+        selector.appendChild(option);
       }
-      select.value = String(state.selectedAvalancheBit);
+
+      selector.value = String(state.selectedAvalancheBit);
+
       renderSelectedBit();
     }
 
     function renderSelectedBit() {
-      qsa('.des-bit-cell').forEach(function (cell) { cell.classList.toggle('is-selected', Number(cell.dataset.bit) === state.selectedAvalancheBit); });
-      qs('#des-av-selected').textContent = 'Bit ' + state.selectedAvalancheBit;
+      qsa('.des-bit-cell').forEach(function (cell) {
+        cell.classList.toggle(
+          'is-selected',
+          Number(cell.dataset.bit) === state.selectedAvalancheBit
+        );
+      });
+
+      setText(
+        '#des-av-selected',
+        'Bit ' + state.selectedAvalancheBit
+      );
     }
 
     function renderInputPreview(originalBits, modifiedBits) {
       var container = qs('#des-av-input-bits');
+
+      if (!container) return;
+
       container.innerHTML = '';
+
       originalBits.forEach(function (bit, index) {
         var cell = document.createElement('span');
         var changed = bit !== modifiedBits[index];
-        cell.className = 'des-input-bit' + (changed ? ' changed' : '');
-        cell.innerHTML = '<strong>' + modifiedBits[index] + '</strong><small>' + (index + 1) + '</small>';
-        cell.title = 'Input bit ' + (index + 1) + (changed ? ': flipped' : ': unchanged');
+
+        cell.className =
+          'des-input-bit' +
+          (changed ? ' changed' : '');
+
+        var strong = document.createElement('strong');
+        strong.textContent = modifiedBits[index];
+
+        var small = document.createElement('small');
+        small.textContent = index + 1;
+
+        cell.appendChild(strong);
+        cell.appendChild(small);
+
+        cell.title =
+          'Input bit ' + (index + 1) +
+          (changed ? ': flipped' : ': unchanged');
+
         container.appendChild(cell);
       });
-      qs('#des-av-input-chip').textContent = (state.avalancheTarget === 'plaintext' ? 'Plaintext' : 'Key') + ' · Bit ' + state.selectedAvalancheBit;
+
+      setText(
+        '#des-av-input-chip',
+        (
+          state.avalancheTarget === 'plaintext'
+            ? 'Plaintext'
+            : 'Key'
+        ) +
+        ' · Bit ' + state.selectedAvalancheBit
+      );
     }
 
-    qs('#des-av-bit-select').addEventListener('change', function () {
+    on('#des-av-bit-select', 'change', function () {
       state.selectedAvalancheBit = Number(this.value);
       renderSelectedBit();
       updateAvalanche();
     });
-    qs('#des-av-target').addEventListener('change', function () { state.avalancheTarget = this.value; updateAvalanche(); });
-    qs('#des-av-run').addEventListener('click', updateAvalanche);
+
+    on('#des-av-target', 'change', function () {
+      state.avalancheTarget = this.value;
+      updateAvalanche();
+    });
+
+    on('#des-av-run', 'click', updateAvalanche);
 
     function renderBitString(container, bits, changedBits) {
+      if (!container) return;
+
       container.innerHTML = '';
+
       bits.forEach(function (bit, index) {
         var span = document.createElement('span');
-        span.title = 'Ciphertext bit ' + (index + 1) + ': ' + bit + (changedBits && changedBits[index] ? ' — flipped' : ' — unchanged');
-        if (changedBits) span.style.background = changedBits[index] ? '#d96559' : '#d8eadf';
+        var changed = Boolean(changedBits && changedBits[index]);
+
+        span.title =
+          'Ciphertext bit ' + (index + 1) +
+          ': ' + bit +
+          (changed ? ' — changed' : ' — unchanged');
+
+        if (changedBits) {
+          span.style.background = changed
+            ? '#D96559'
+            : '#D8EADF';
+        }
+
         container.appendChild(span);
       });
     }
@@ -695,157 +1354,519 @@
     function renderDiff(originalBits, modifiedBits) {
       var originalRow = qs('#des-diff-original');
       var modifiedRow = qs('#des-diff-modified');
+
+      if (!originalRow || !modifiedRow) return;
+
       originalRow.innerHTML = '';
       modifiedRow.innerHTML = '';
-      originalBits.forEach(function (bit, i) {
-        var changed = bit !== modifiedBits[i];
-        var a = document.createElement('span'); a.className = 'des-diff-bit ' + (changed ? 'changed' : 'unchanged'); a.textContent = bit; a.title = 'Bit ' + (i + 1) + (changed ? ': flipped' : ': unchanged'); originalRow.appendChild(a);
-        var b = document.createElement('span'); b.className = 'des-diff-bit ' + (changed ? 'changed' : 'unchanged'); b.textContent = modifiedBits[i]; b.title = 'Bit ' + (i + 1) + (changed ? ': flipped' : ': unchanged'); modifiedRow.appendChild(b);
+
+      originalBits.forEach(function (bit, index) {
+        var changed = bit !== modifiedBits[index];
+
+        var original = document.createElement('span');
+
+        original.className =
+          'des-diff-bit ' +
+          (changed ? 'changed' : 'unchanged');
+
+        original.textContent = bit;
+
+        original.title =
+          'Bit ' + (index + 1) +
+          (changed ? ': changed' : ': unchanged');
+
+        originalRow.appendChild(original);
+
+        var modified = document.createElement('span');
+
+        modified.className =
+          'des-diff-bit ' +
+          (changed ? 'changed' : 'unchanged');
+
+        modified.textContent = modifiedBits[index];
+
+        modified.title =
+          'Bit ' + (index + 1) +
+          (changed ? ': changed' : ': unchanged');
+
+        modifiedRow.appendChild(modified);
       });
     }
+
+    /* =======================================================
+       14. AVALANCHE CALCULATION
+       ======================================================= */
 
     function updateAvalanche() {
       try {
-        var keyInfo = parseKeyInput(qs('#des-key').value);
-        var parsed = parsePlaintext(qs('#des-plaintext').value, qs('#des-plaintext-mode').value);
-        if (parsed.bytes.length === 0) throw new Error('Plaintext cannot be empty.');
-        var originalBlock = pkcs7Pad(parsed.bytes, 8).slice(0, 8);
-        var modifiedPlain = originalBlock.slice();
+        var plain = currentPlaintext();
+        var keyInfo = currentKeyInfo();
+
+        var originalBlock = plain.block.slice();
+        var modifiedBlock = originalBlock.slice();
         var modifiedKey = keyInfo.bytes.slice();
+
         var modifiedInputLabel;
+
         if (state.avalancheTarget === 'plaintext') {
-          modifiedPlain = flipBit(modifiedPlain, state.selectedAvalancheBit);
-          modifiedInputLabel = 'Modified plaintext block · bit ' + state.selectedAvalancheBit + ' flipped';
+          modifiedBlock = flipBit(
+            modifiedBlock,
+            state.selectedAvalancheBit
+          );
+
+          modifiedInputLabel =
+            'Plaintext bit ' +
+            state.selectedAvalancheBit +
+            ' flipped';
         } else {
-          modifiedKey = flipBit(modifiedKey, state.selectedAvalancheBit);
-          modifiedInputLabel = 'Modified key · bit ' + state.selectedAvalancheBit + ' flipped';
+          modifiedKey = flipBit(
+            modifiedKey,
+            state.selectedAvalancheBit
+          );
+
+          modifiedInputLabel =
+            'Key bit ' +
+            state.selectedAvalancheBit +
+            ' flipped';
         }
-        var originalResult = processBlock(originalBlock, keyInfo.bytes, false);
-        var modifiedResult = processBlock(modifiedPlain, modifiedKey, false);
+
+        var originalResult = processBlock(
+          originalBlock,
+          keyInfo.bytes,
+          false
+        );
+
+        var modifiedResult = processBlock(
+          modifiedBlock,
+          modifiedKey,
+          false
+        );
+
         var originalBits = originalResult.bits;
         var modifiedBits = modifiedResult.bits;
-        var originalInputBits = state.avalancheTarget === 'plaintext' ? bytesToBits(originalBlock) : bytesToBits(keyInfo.bytes);
-        var modifiedInputBits = state.avalancheTarget === 'plaintext' ? bytesToBits(modifiedPlain) : bytesToBits(modifiedKey);
-        var changed = originalBits.map(function (bit, i) { return bit !== modifiedBits[i]; });
-        var distance = changed.filter(Boolean).length;
-        var percent = (distance / 64) * 100;
 
-        renderInputPreview(originalInputBits, modifiedInputBits);
-        qs('#des-av-original-hex').textContent = originalResult.hex;
-        qs('#des-av-modified-hex').textContent = modifiedResult.hex;
-        qs('#des-av-original-input').textContent = 'Original plaintext block: ' + bytesToHex(originalBlock) + ' · key: ' + keyInfo.hex;
-        qs('#des-av-modified-input').textContent = modifiedInputLabel + ' · input: ' + (state.avalancheTarget === 'plaintext' ? bytesToHex(modifiedPlain) : keyInfo.hex) + (state.avalancheTarget === 'plaintext' ? ' · key unchanged: ' + keyInfo.hex : ' · plaintext unchanged: ' + bytesToHex(originalBlock));
-        renderBitString(qs('#des-av-original-bits'), originalBits, changed);
-        renderBitString(qs('#des-av-modified-bits'), modifiedBits, changed);
+        var originalInputBits =
+          state.avalancheTarget === 'plaintext'
+            ? bytesToBits(originalBlock)
+            : bytesToBits(keyInfo.bytes);
+
+        var modifiedInputBits =
+          state.avalancheTarget === 'plaintext'
+            ? bytesToBits(modifiedBlock)
+            : bytesToBits(modifiedKey);
+
+        var changedBits = originalBits.map(function (bit, index) {
+          return bit !== modifiedBits[index];
+        });
+
+        var distance = hammingDistance(
+          originalBits,
+          modifiedBits
+        );
+
+        var percentage = (distance / 64) * 100;
+
+        renderInputPreview(
+          originalInputBits,
+          modifiedInputBits
+        );
+
+        setText(
+          '#des-av-original-hex',
+          originalResult.hex
+        );
+
+        setText(
+          '#des-av-modified-hex',
+          modifiedResult.hex
+        );
+
+        setText(
+          '#des-av-original-input',
+          'Plaintext: ' + bytesToHex(originalBlock) +
+          ' · Key: ' + keyInfo.hex
+        );
+
+        setText(
+          '#des-av-modified-input',
+          modifiedInputLabel +
+          ' · ' +
+          (
+            state.avalancheTarget === 'plaintext'
+              ? 'Plaintext: ' + bytesToHex(modifiedBlock) +
+                ' · Key unchanged: ' + keyInfo.hex
+              : 'Key: ' + bytesToHex(modifiedKey) +
+                ' · Plaintext unchanged: ' + bytesToHex(originalBlock)
+          )
+        );
+
+        renderBitString(
+          qs('#des-av-original-bits'),
+          originalBits,
+          changedBits
+        );
+
+        renderBitString(
+          qs('#des-av-modified-bits'),
+          modifiedBits,
+          changedBits
+        );
+
         renderDiff(originalBits, modifiedBits);
-        qs('#des-hamming-count').textContent = distance + ' / 64';
-        qs('#des-hamming-percent').textContent = percent.toFixed(1) + '%';
-        qs('#des-av-meter-fill').style.width = percent + '%';
-        var qualitative = Math.abs(percent - 50) <= 15 ? 'close to the idealized ~50% avalanche target.' : 'outside a ±15 percentage-point band around 50%; repeat with another bit to explore DES diffusion.';
-        qs('#des-av-takeaway').textContent = distance + ' of 64 bits changed (' + percent.toFixed(1) + '%). This run is ' + qualitative;
-      } catch (e) {
-        qs('#des-av-takeaway').textContent = 'Avalanche test unavailable: ' + e.message;
+
+        setText(
+          '#des-hamming-count',
+          distance + ' / 64'
+        );
+
+        setText(
+          '#des-hamming-percent',
+          percentage.toFixed(1) + '%'
+        );
+
+        var meter = qs('#des-av-meter-fill');
+
+        if (meter) {
+          meter.style.width = percentage + '%';
+        }
+
+        var observation;
+
+        if (distance === 0) {
+          observation = 'No output bits changed for this comparison.';
+        } else if (Math.abs(percentage - 50) <= 15) {
+          observation = 'This result is close to the idealized 50% output-bit change expectation.';
+        } else {
+          observation = 'The result differs from the idealized 50% expectation. Different bit positions can produce different distances.';
+        }
+
+        setText(
+          '#des-av-takeaway',
+          distance + ' of 64 ciphertext bits changed (' +
+          percentage.toFixed(1) + '%). ' + observation
+        );
+      } catch (error) {
+        setText(
+          '#des-av-takeaway',
+          'Avalanche calculation unavailable: ' + error.message
+        );
       }
     }
+
+    /* =======================================================
+       15. QUIZ
+       ======================================================= */
 
     function renderQuiz() {
       var quiz = [
-        { q: 'What is the DES block size?', o: ['32 bits', '64 bits', '128 bits', '256 bits'], a: 1, e: 'DES processes 64-bit data blocks.' },
-        { q: 'How many key bits are effectively used by DES?', o: ['64', '48', '56', '128'], a: 2, e: 'The 8 parity positions are discarded, leaving 56 effective key bits.' },
-        { q: 'How many Feistel rounds does DES use?', o: ['8', '12', '16', '32'], a: 2, e: 'DES has exactly 16 rounds.' },
-        { q: 'What does the Feistel structure make possible for decryption?', o: ['No key is required', 'The same round function can be used with reversed subkeys', 'The S-boxes can be removed', 'The block size becomes 32 bits'], a: 1, e: 'DES decryption reuses the same Feistel structure with K16 … K1.' },
-        { q: 'What is the principal role of DES S-boxes?', o: ['Add non-linearity', 'Increase block size', 'Store the key', 'Perform the final permutation'], a: 0, e: 'S-boxes map 6 input bits to 4 output bits and provide non-linearity.' },
-        { q: 'Which sequence best describes a DES round?', o: ['Hash → compress → encode', 'Expand → XOR subkey → S-boxes → P-box', 'Encrypt → decrypt → hash', 'Shift key → pad message → hash'], a: 1, e: 'The F-function expands R, XORs a 48-bit subkey, applies eight S-boxes, then P-permutes the result.' },
-        { q: 'What is the avalanche effect?', o: ['Changing one input bit changes many output bits', 'The key becomes longer after encryption', 'The ciphertext is always twice as long', 'The algorithm stops after one round'], a: 0, e: 'A strong diffusion property is that a one-bit input change affects a large fraction of output bits.' },
-        { q: 'Why is a ciphertext Hamming distance near 32/64 interesting in the avalanche demo?', o: ['It shows all bits are always zero', 'It is close to the idealized 50% output-bit change expectation', 'It proves the key is 128 bits', 'It means DES uses CBC mode'], a: 1, e: '32 changed bits out of 64 equals 50%; real runs vary around this value.' },
-        { q: 'Which statement about DES keys is correct?', o: ['Every 64th bit is used twice', 'Parity bits occupy one bit in each byte and are dropped by PC-1', 'DES has no key schedule', 'Keys are 32 bits'], a: 1, e: 'Each key byte includes one parity position; PC-1 selects 56 non-parity bits.' },
-        { q: 'Why was DES eventually replaced for modern use?', o: ['It could not encrypt bytes', 'Its effective 56-bit key was no longer adequate against brute-force capabilities', 'It had no S-boxes', 'It used a 512-bit block'], a: 1, e: 'NIST withdrew FIPS 46-3 in 2005 because DES no longer provided sufficient security; AES became the modern standard.' }
+        {
+          q: 'What is the DES block size?',
+          options: ['32 bits', '64 bits', '128 bits', '256 bits'],
+          answer: 1,
+          explanation: 'DES processes data in 64-bit blocks.'
+        },
+        {
+          q: 'How many effective key bits does DES use?',
+          options: ['64 bits', '48 bits', '56 bits', '128 bits'],
+          answer: 2,
+          explanation: 'PC-1 removes the eight parity positions, leaving 56 effective bits.'
+        },
+        {
+          q: 'How many Feistel rounds does DES use?',
+          options: ['8', '12', '16', '32'],
+          answer: 2,
+          explanation: 'DES has sixteen rounds.'
+        },
+        {
+          q: 'How does DES decryption differ from encryption?',
+          options: [
+            'It does not use a key',
+            'It uses the round keys in reverse order',
+            'It removes all S-boxes',
+            'It uses a 32-bit block'
+          ],
+          answer: 1,
+          explanation: 'The Feistel structure is reused with the subkeys applied in reverse order.'
+        },
+        {
+          q: 'What is the purpose of the S-boxes?',
+          options: [
+            'Add non-linearity',
+            'Increase block size',
+            'Store the plaintext',
+            'Perform the final permutation'
+          ],
+          answer: 0,
+          explanation: 'The eight S-boxes transform 48 bits into 32 bits and add non-linearity.'
+        },
+        {
+          q: 'Which sequence describes the main round function?',
+          options: [
+            'Hash, compress, encode',
+            'Expand, XOR, S-boxes, P-box',
+            'Encrypt, decrypt, hash',
+            'Pad, compress, hash'
+          ],
+          answer: 1,
+          explanation: 'The right half is expanded, XORed with the subkey, substituted and permuted.'
+        },
+        {
+          q: 'What describes the avalanche effect?',
+          options: [
+            'Changing one input bit can change many output bits',
+            'The key becomes longer',
+            'The ciphertext always doubles in size',
+            'The algorithm stops after one round'
+          ],
+          answer: 0,
+          explanation: 'A small input change can influence a large fraction of the output bits.'
+        },
+        {
+          q: 'What does a Hamming distance of 32 out of 64 mean?',
+          options: [
+            'No bits changed',
+            'Half of the ciphertext bits changed',
+            'The key is 128 bits',
+            'DES performed 32 rounds'
+          ],
+          answer: 1,
+          explanation: '32 changed bits out of 64 is 50%; a particular experiment is not guaranteed to yield this result.'
+        },
+        {
+          q: 'What does PC-1 do to the DES key?',
+          options: [
+            'Doubles its length',
+            'Selects 56 non-parity bits',
+            'Creates the plaintext',
+            'Produces the ciphertext directly'
+          ],
+          answer: 1,
+          explanation: 'PC-1 selects 56 bits from the original 64-bit key representation.'
+        },
+        {
+          q: 'Why is DES unsuitable for modern security?',
+          options: [
+            'It cannot process binary data',
+            'Its effective 56-bit key is too short',
+            'It has no key schedule',
+            'It does not use permutations'
+          ],
+          answer: 1,
+          explanation: 'The 56-bit effective key makes exhaustive key search feasible with modern resources.'
+        }
       ];
+
       var form = qs('#des-quiz-form');
+
+      if (!form) return;
+
       form.innerHTML = '';
-      quiz.forEach(function (item, idx) {
-        var wrapper = document.createElement('article'); wrapper.className = 'des-quiz-item'; wrapper.dataset.answer = String(item.a);
-        var q = document.createElement('p'); q.className = 'des-quiz-q'; q.textContent = (idx + 1) + '. ' + item.q; wrapper.appendChild(q);
-        var options = document.createElement('div'); options.className = 'des-quiz-options';
-        item.o.forEach(function (option, oi) {
-          var label = document.createElement('label'); label.className = 'des-quiz-option';
-          label.innerHTML = '<input type="radio" name="des-q-' + idx + '" value="' + oi + '"><span>' + option + '</span>';
+
+      quiz.forEach(function (item, index) {
+        var article = document.createElement('article');
+
+        article.className = 'des-quiz-item';
+        article.dataset.answer = String(item.answer);
+
+        var question = document.createElement('p');
+
+        question.className = 'des-quiz-q';
+        question.textContent = (index + 1) + '. ' + item.q;
+
+        article.appendChild(question);
+
+        var options = document.createElement('div');
+
+        options.className = 'des-quiz-options';
+
+        item.options.forEach(function (option, optionIndex) {
+          var label = document.createElement('label');
+
+          label.className = 'des-quiz-option';
+
+          var input = document.createElement('input');
+
+          input.type = 'radio';
+          input.name = 'des-q-' + index;
+          input.value = String(optionIndex);
+
+          var text = document.createElement('span');
+
+          text.textContent = option;
+
+          label.appendChild(input);
+          label.appendChild(text);
           options.appendChild(label);
         });
-        wrapper.appendChild(options);
-        var feedback = document.createElement('div'); feedback.className = 'des-quiz-feedback'; feedback.dataset.explanation = item.e; wrapper.appendChild(feedback);
-        form.appendChild(wrapper);
+
+        article.appendChild(options);
+
+        var feedback = document.createElement('div');
+
+        feedback.className = 'des-quiz-feedback';
+        feedback.dataset.explanation = item.explanation;
+
+        article.appendChild(feedback);
+        form.appendChild(article);
       });
     }
 
-    qs('#des-quiz-submit').addEventListener('click', function () {
+    on('#des-quiz-submit', 'click', function () {
       var score = 0;
+      var total = 0;
+
       qsa('.des-quiz-item').forEach(function (item) {
-        var answer = Number(item.dataset.answer);
+        total++;
+
+        var correctAnswer = Number(item.dataset.answer);
         var selected = item.querySelector('input:checked');
         var feedback = item.querySelector('.des-quiz-feedback');
-        var correct = selected && Number(selected.value) === answer;
-        item.classList.toggle('correct', !!correct);
-        item.classList.toggle('incorrect', !!selected && !correct);
-        if (correct) score++;
-        feedback.textContent = (correct ? '✓ Correct. ' : '✕ Review. ') + feedback.dataset.explanation;
-      });
-      qs('#des-quiz-score').textContent = score + ' / 10';
-      qs('#des-quiz-result').hidden = false;
-      qs('#des-quiz-result').innerHTML = '<strong>' + score + '/10</strong> — ' + (score >= 8 ? 'Strong understanding. Revisit the round trace if you want to connect the formulas to the live implementation.' : 'Review the theory and run the simulation again, then retake the quiz.');
-    });
 
-    qs('#des-quiz-reset').addEventListener('click', function () { renderQuiz(); qs('#des-quiz-score').textContent = '0 / 10'; qs('#des-quiz-result').hidden = true; });
+        var isCorrect =
+          !!selected &&
+          Number(selected.value) === correctAnswer;
 
-    qs('#des-run-tests').addEventListener('click', function () {
-      var container = qs('#des-test-results');
-      container.innerHTML = '';
-      var tests = runNistTests();
-      tests.forEach(function (test) {
-        var row = document.createElement('div'); row.className = 'des-test-line ' + (test.passed ? 'ok' : 'fail');
-        row.innerHTML = '<span>' + test.name + '<br><small>Expected ' + test.expected + ' · Actual ' + test.actual + '</small></span><strong>' + (test.passed ? 'PASS' : 'FAIL') + '</strong>';
-        container.appendChild(row);
+        item.classList.toggle('correct', isCorrect);
+        item.classList.toggle(
+          'incorrect',
+          !!selected && !isCorrect
+        );
+
+        if (isCorrect) {
+          score++;
+        }
+
+        if (feedback) {
+          feedback.textContent =
+            (isCorrect ? '✓ Correct. ' : 'Review. ') +
+            feedback.dataset.explanation;
+        }
       });
-      var key = parseKeyInput(qs('#des-key').value).bytes;
-      var message = parsePlaintext(qs('#des-plaintext').value, qs('#des-plaintext-mode').value).bytes;
-      try {
-        var encrypted = encryptMessage(message, key);
-        var decrypted = decryptMessage(encrypted.bytes, key);
-        var row2 = document.createElement('div'); row2.className = 'des-test-line ' + (compareBytes(message, decrypted.bytes) ? 'ok' : 'fail');
-        row2.innerHTML = '<span>Live encrypt → decrypt round-trip</span><strong>' + (compareBytes(message, decrypted.bytes) ? 'PASS' : 'FAIL') + '</strong>';
-        container.appendChild(row2);
-      } catch (e) {
-        var row3 = document.createElement('div'); row3.className = 'des-test-line fail'; row3.textContent = 'Live round-trip test failed: ' + e.message; container.appendChild(row3);
+
+      setText('#des-quiz-score', score + ' / ' + total);
+
+      var result = qs('#des-quiz-result');
+
+      if (result) {
+        result.hidden = false;
+        result.textContent =
+          score + ' / ' + total + '. ' +
+          (
+            score >= 8
+              ? 'Strong understanding. Continue exploring the simulation.'
+              : 'Review the theory section and try the quiz again.'
+          );
       }
     });
 
+    on('#des-quiz-reset', 'click', function () {
+      renderQuiz();
+
+      setText('#des-quiz-score', '0 / 10');
+      setHidden('#des-quiz-result', true);
+    });
+
+    /* =======================================================
+       16. RESET
+       ======================================================= */
+
     function resetLab() {
-      state.currentRound = 1; state.trace = null; state.roundPlaying = false; state.selectedAvalancheBit = 1; state.avalancheTarget = 'plaintext';
-      qs('#des-plaintext-mode').value = 'auto';
-      qs('#des-plaintext').value = '0123456789ABCDEF';
-      qs('#des-key').value = '133457799BBCDFF1';
-      qs('#des-av-target').value = 'plaintext';
+      state.currentRound = 1;
+      state.trace = null;
+      state.traceMode = 'encrypt';
+
+      state.lastCipherBytes = null;
+      state.lastCipherHex = '';
+      state.lastPlainBytes = null;
+      state.lastPlainBlock = null;
+      state.lastPlainLength = 0;
+      state.lastKeyBytes = null;
+      state.lastKeyHex = '';
+
+      state.selectedAvalancheBit = 1;
+      state.avalancheTarget = 'plaintext';
+
+      setValue('#des-plaintext', 'DES LAB!');
+      setValue('#des-key', '133457799BBCDFF1');
+      setValue('#des-av-target', 'plaintext');
+
+      updateKeyPreview();
+      updatePlainSummary();
+
+      setText('#des-cipher-hex', '—');
+      setText('#des-cipher-binary', '—');
+      setText('#des-decrypted', 'Click Encrypt first, then click Decrypt when ready.');
+      setText('#des-block-count', 'Blocks: 0 · 64 bits');
+      setText('#des-padding-note', 'One 64-bit block');
+      setText('#des-verified', 'Not encrypted');
+
+      setClass('#des-verified', 'des-status neutral');
+
+      clearError();
+
       buildAvalancheGrid();
-      updatePlainSummary(); updateKeyPreview(); clearError();
-      qs('#des-cipher-hex').textContent = '85E813540F0AB405';
-      qs('#des-cipher-binary').textContent = bitsToBinary(bytesToBits(hexToBytes('85E813540F0AB405')), true);
-      qs('#des-decrypted').textContent = '0123456789ABCDEF';
-      qs('#des-verified').textContent = 'Not run'; qs('#des-verified').className = 'des-status neutral';
+      renderSelectedBit();
+
+      setText('#des-av-original-hex', '—');
+      setText('#des-av-modified-hex', '—');
+      setText('#des-av-original-input', '');
+      setText('#des-av-modified-input', '');
+      setText('#des-hamming-count', '—');
+      setText('#des-hamming-percent', '—');
+      setText('#des-av-takeaway', 'Run the test to compare both ciphertexts.');
+
+      var meter = qs('#des-av-meter-fill');
+
+      if (meter) {
+        meter.style.width = '0%';
+      }
+
+      [
+        '#des-av-original-bits',
+        '#des-av-modified-bits',
+        '#des-av-input-bits',
+        '#des-diff-original',
+        '#des-diff-modified'
+      ].forEach(function (selector) {
+        var element = qs(selector);
+        if (element) element.innerHTML = '';
+      });
+
+      updateRoundView();
       setTab('theory');
-      runEncryption();
     }
 
+    on('#des-reset-btn', 'click', resetLab);
+
+    /* =======================================================
+       17. INITIALIZATION
+       ======================================================= */
+
     try {
+      // Check known standard vectors before enabling the interface.
       selfTest();
+
       renderQuiz();
       buildAvalancheGrid();
-      updatePlainSummary();
       updateKeyPreview();
-      runEncryption();
-      var initialTab = (location.hash || '').replace('#', '');
-      if (['theory','procedure','simulation','avalanche','quiz'].indexOf(initialTab) !== -1) setTab(initialTab);
-    } catch (e) {
-      showError('DES self-test failed: ' + e.message);
+      updatePlainSummary();
+      updateRoundView();
+
+      // Important: do not encrypt or decrypt automatically on startup.
+      // Both actions require explicit user input through the buttons.
+      var initialTab = (window.location.hash || '').slice(1);
+
+      setTab(
+        VALID_TABS.indexOf(initialTab) !== -1
+          ? initialTab
+          : 'theory'
+      );
+    } catch (error) {
+      showError(
+        'DES initialization failed: ' + error.message
+      );
+
+      console.error('[DES Lab initialization]', error);
     }
   });
 })(typeof window !== 'undefined' ? window : globalThis);
